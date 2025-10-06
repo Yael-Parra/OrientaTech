@@ -3,7 +3,7 @@ import sys
 from loguru import logger
 
 # Import connection functions from the same directory
-from db_connection import connect, disconnect
+from .db_connection import connect, disconnect
 
 def create_essential_tables():
     conn = connect()

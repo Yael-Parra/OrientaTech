@@ -5,13 +5,16 @@ from dotenv import load_dotenv
 
 from routes.auth_simple import auth_router
 from routes.github_routes import github_router
+from routes.documents_routes import documents_router
 
 # Cargar variables de entorno
 load_dotenv()
 
 # Configuración CORS
-
-CORS_ORIGINS = eval(os.getenv("CORS_ORIGINS"))
+try:
+    CORS_ORIGINS = eval(os.getenv("CORS_ORIGINS", '["*"]'))
+except:
+    CORS_ORIGINS = ["*"]
 
 
 # Crear aplicación FastAPI
@@ -33,6 +36,14 @@ app = FastAPI(
             "description": "Operaciones de autenticación y gestión de usuarios. Incluye registro, login, gestión de tokens y perfiles de usuario.",
         },
         {
+            "name": "📄 Documentos",
+            "description": "Gestión de documentos de usuario. Subida, descarga, listado y eliminación de CVs, cartas de presentación y certificados con almacenamiento seguro.",
+        },
+        {
+            "name": "👥 GitHub",
+            "description": "Integración con GitHub API para obtener información del equipo y contribuidores del proyecto en tiempo real.",
+        },
+        {
             "name": "🏥 Sistema",
             "description": "Endpoints de monitoreo y estado del sistema.",
         }
@@ -51,6 +62,7 @@ app.add_middleware(
 # Incluir routers
 app.include_router(auth_router)
 app.include_router(github_router)
+app.include_router(documents_router)
 
 # Endpoint de salud
 @app.get(
