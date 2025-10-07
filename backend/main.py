@@ -10,6 +10,8 @@ from routes.github_routes import github_router
 from routes.documents_routes import documents_router
 from routes.user_profile_routes import profile_router
 from routes.system_routes import system_router
+from routes.reviews_routes import reviews_router
+from routes.employment_platforms_routes import platforms_router
 from services.setup_service import setup_service
 
 # Cargar variables de entorno
@@ -83,6 +85,14 @@ app = FastAPI(
         {
             "name": "🐙 GitHub Integration",
             "description": "Integración con GitHub API para obtener información del equipo y contribuidores del proyecto en tiempo real.",
+        },
+        {
+            "name": "⭐ Reviews (Reseñas)",
+            "description": "Sistema completo de reseñas de plataformas de empleo. CRUD con autenticación JWT, estadísticas y relaciones con plataformas laborales.",
+        },
+        {
+            "name": "💼 Employment Platforms",
+            "description": "Gestión de plataformas de empleo. Consulta, creación y estadísticas de plataformas laborales con filtros avanzados.",
         }
     ]
 )
@@ -101,6 +111,8 @@ app.include_router(system_router)
 app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(documents_router)
+app.include_router(platforms_router)
+app.include_router(reviews_router)
 app.include_router(github_router)
 
 if __name__ == "__main__":
