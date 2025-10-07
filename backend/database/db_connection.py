@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from loguru import logger
 from urllib.parse import urlparse
 
-# Load environment variables from the .env file in project root directory
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+# Load environment variables from the .env file in backend directory
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 def get_database_url():
     """Get the constructed database URL for the target database"""

@@ -1,7 +1,7 @@
 import os
 import re
 from loguru import logger
-from .db_connection import connect_to_postgres_server
+from db_connection import connect_to_postgres_server
 
 def validate_database_name(name: str) -> bool:
     """
