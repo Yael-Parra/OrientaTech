@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from routes.auth_simple import auth_router
 from routes.github_routes import github_router
 from routes.documents_routes import documents_router
+from routes.user_profile_routes import profile_router
+from routes.system_routes import system_router
 from services.setup_service import setup_service
 
 # Cargar variables de entorno
@@ -52,8 +54,6 @@ app = FastAPI(
     title="🚀 OrientaTech API",
     description="""
     **API completa de autenticación y gestión de usuarios para OrientaTech**
-    
-    🔧 **Auto-configuración**: Se configura automáticamente al iniciar.
      """,
     version="1.0.0",
     lifespan=lifespan,
@@ -65,20 +65,24 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_tags=[
         {
+            "name": "🏥 Sistema",
+            "description": "Endpoints de sistema, salud, información y monitoreo de la API.",
+        },
+        {
             "name": "🔐 Autenticación",
             "description": "Operaciones de autenticación y gestión de usuarios. Incluye registro, login, gestión de tokens y perfiles de usuario.",
+        },
+        {
+            "name": "👤 Perfil de Usuario",
+            "description": "Gestión completa del perfil personal del usuario. CRUD de información personal, educación, experiencia y habilidades con autenticación JWT.",
         },
         {
             "name": "📄 Documentos",
             "description": "Gestión de documentos de usuario. Subida, descarga, listado y eliminación de CVs, cartas de presentación y certificados con almacenamiento seguro.",
         },
         {
-            "name": "👥 GitHub",
+            "name": "🐙 GitHub Integration",
             "description": "Integración con GitHub API para obtener información del equipo y contribuidores del proyecto en tiempo real.",
-        },
-        {
-            "name": "🏥 Sistema",
-            "description": "Endpoints de monitoreo y estado del sistema.",
         }
     ]
 )
@@ -93,46 +97,11 @@ app.add_middleware(
 )
 
 # Incluir routers
+app.include_router(system_router)
 app.include_router(auth_router)
-app.include_router(github_router)
+app.include_router(profile_router)
 app.include_router(documents_router)
-
-# Endpoint de salud
-@app.get(
-    "/",
-    tags=["🏥 Sistema"],
-    summary="Página de inicio de la API",
-    description="Endpoint principal que confirma que la API está funcionando correctamente y proporciona información básica del servicio.",
-    response_description="Mensaje de bienvenida y versión del servicio"
-)
-
-
-@app.get(
-    "/health",
-    tags=["🏥 Sistema"],
-    summary="Verificación de salud del servicio",
-    description="""
-
-   ***Endpoint de verificación de salud del sistema.***
-    
-    """,
-    response_description="Estado de salud del servicio"
-)
-async def health_check():
-    """
-    Verificar el estado de salud del servicio
-    """
-    from datetime import datetime
-    
-    return {
-        "status": "healthy",
-        "service": "OrientaTech API",
-        "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
-        "environment": os.getenv("ENVIRONMENT", "development"),
-        "database": "connected",  # Aquí podrías agregar un check real de la DB
-        "uptime": "running"
-    }
+app.include_router(github_router)
 
 if __name__ == "__main__":
     import uvicorn
