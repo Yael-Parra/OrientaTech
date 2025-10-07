@@ -1,4 +1,5 @@
 # Configuración de terminaciones de línea para OrientaTech
+# git add --renormalize .
 
 # Por defecto, usar LF para todos los archivos de texto
 * text=auto eol=lf
