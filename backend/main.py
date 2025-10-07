@@ -2,13 +2,43 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+from loguru import logger
+from contextlib import asynccontextmanager
 
 from routes.auth_simple import auth_router
 from routes.github_routes import github_router
 from routes.documents_routes import documents_router
+from services.setup_service import setup_service
 
 # Cargar variables de entorno
 load_dotenv()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Configuración automática al iniciar la aplicación"""
+    # Startup - Configuración automática
+    logger.info("🚀 Iniciando OrientaTech API...")
+    
+    # Verificar si se necesita configuración
+    if setup_service.is_setup_required():
+        logger.info("⚙️ Ejecutando configuración automática...")
+        try:
+            results = setup_service.run_full_setup()
+            if all(results.values()):
+                logger.success("✅ Configuración completada")
+            else:
+                logger.warning("⚠️ Configuración parcial - algunos servicios pueden fallar")
+        except Exception as e:
+            logger.error(f"❌ Error en configuración: {e}")
+            logger.warning("⚠️ Continuando sin configuración completa")
+    else:
+        logger.info("✅ Sistema ya configurado")
+    
+    yield
+    
+    # Shutdown
+    logger.info("🔄 Cerrando aplicación")
 
 # Configuración CORS
 try:
@@ -17,13 +47,16 @@ except:
     CORS_ORIGINS = ["*"]
 
 
-# Crear aplicación FastAPI
+# Crear aplicación FastAPI con configuración automática
 app = FastAPI(
     title="🚀 OrientaTech API",
     description="""
     **API completa de autenticación y gestión de usuarios para OrientaTech**
+    
+    🔧 **Auto-configuración**: Se configura automáticamente al iniciar.
      """,
     version="1.0.0",
+    lifespan=lifespan,
     license_info={
         "name": "MIT License",
         "url": "https://opensource.org/licenses/MIT",

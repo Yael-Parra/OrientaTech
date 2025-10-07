@@ -366,10 +366,15 @@ async def register(
     user_data: Annotated[
         UserRegister,
         Body(
-            example={
-                "nombre": "Juan Pérez García",
-                "email": "usuario@ejemplo.com",
-                "password": "miPasswordSegura123"
+            examples={
+                "default": {
+                    "summary": "Ejemplo de registro",
+                    "value": {
+                        "nombre": "Juan Pérez García",
+                        "email": "usuario@ejemplo.com",
+                        "password": "miPasswordSegura123"
+                    }
+                }
             },
             description="Datos del usuario a registrar"
         )
@@ -476,9 +481,14 @@ async def login(
     user_credentials: Annotated[
         UserLogin,
         Body(
-            example={
-                "email": "usuario@ejemplo.com",
-                "password": "miPasswordSegura123"
+            examples={
+                "default": {
+                    "summary": "Ejemplo de login",
+                    "value": {
+                        "email": "usuario@ejemplo.com",
+                        "password": "miPasswordSegura123"
+                    }
+                }
             },
             description="Credenciales de usuario para autenticación"
         )
