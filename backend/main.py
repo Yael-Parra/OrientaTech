@@ -13,9 +13,10 @@ from routes.system_routes import system_router
 from routes.reviews_routes import reviews_router
 from routes.employment_platforms_routes import platforms_router
 from services.setup_service import setup_service
+from pathlib import Path
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde backend/.env
+load_dotenv(dotenv_path=Path(__file__).parent / '.env')
 
 
 @asynccontextmanager

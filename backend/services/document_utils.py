@@ -10,8 +10,8 @@ from typing import Optional, Dict, List
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde backend/.env
+load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
 
 class DocumentUtils:
     """Utilidades para gestión de documentos de usuarios"""

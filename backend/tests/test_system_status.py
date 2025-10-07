@@ -24,7 +24,7 @@ class TestOrientaTechStatus:
         self.setup_service = SetupService()
         self.backend_dir = Path(__file__).parent.parent
         self.project_root = self.backend_dir.parent
-        self.env_file = self.project_root / '.env'
+        self.env_file = self.backend_dir / '.env'  # .env ahora está en backend
     
     def test_project_structure(self):
         """Test 1: Verificar que la estructura de directorios es correcta"""

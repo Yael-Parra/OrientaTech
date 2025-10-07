@@ -18,7 +18,7 @@ class SetupService:
         # Configuración de rutas
         self.backend_dir = Path(__file__).parent.parent.absolute()
         self.project_root = self.backend_dir.parent
-        self.env_file = self.project_root / '.env'
+        self.env_file = self.backend_dir / '.env'  # .env ahora está en backend
         self.required_dirs = [
             self.backend_dir / 'docs',
             self.backend_dir / 'docs' / 'users',

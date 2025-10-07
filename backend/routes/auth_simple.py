@@ -17,9 +17,10 @@ from services import (
 
 # Import the unified database connection
 from database.db_connection import connect_async, disconnect_async
+from pathlib import Path
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde backend/.env
+load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
 
 # Configuración de la base de datos
 DATABASE_URL = os.getenv("DATABASE_URL")
