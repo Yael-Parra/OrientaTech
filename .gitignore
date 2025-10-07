@@ -155,5 +155,9 @@ config.local.json
 uploads/
 temp/
 
+# Documentos subidos por usuarios (contiene información sensible)
+backend/docs/
+docs/
+
 # Archivos de sistema Windows
 desktop.ini

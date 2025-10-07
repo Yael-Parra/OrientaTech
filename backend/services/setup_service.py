@@ -79,8 +79,8 @@ class SetupService:
             return False
     
     def test_postgres_connection(self) -> bool:
-        """Verifica la conexión a PostgreSQL"""
-        logger.info("Verificando conexión a PostgreSQL...")
+        """Verifica la conexión a la base de datos configurada (Neon/PostgreSQL)"""
+        logger.info("Verificando conexión a la base de datos...")
         
         try:
             database_url = os.getenv("DATABASE_URL")
@@ -88,28 +88,24 @@ class SetupService:
                 logger.error("DATABASE_URL no configurado")
                 return False
                 
-            # Parsear URL para obtener datos de conexión
-            from urllib.parse import urlparse
-            parsed = urlparse(database_url)
-            
-            # Conectar a PostgreSQL (sin especificar base de datos)
-            conn_str = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port}/postgres"
+            # Usar directamente la DATABASE_URL configurada (incluye Neon)
+            logger.info(f"Conectando a base de datos: {database_url.split('@')[1] if '@' in database_url else 'configurada'}")
             
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
             async def test_connection():
-                conn = await asyncpg.connect(conn_str)
+                conn = await asyncpg.connect(database_url)
                 await conn.close()
                 
             loop.run_until_complete(test_connection())
             loop.close()
             
-            logger.success("Conexión al servidor PostgreSQL exitosa")
+            logger.success("Conexión a la base de datos exitosa")
             return True
             
         except Exception as e:
-            logger.error(f"Error conectando a PostgreSQL: {e}")
+            logger.error(f"Error conectando a la base de datos: {e}")
             return False
     
     def setup_database(self) -> bool:
@@ -117,14 +113,22 @@ class SetupService:
         logger.info("Verificando base de datos del proyecto...")
         
         try:
-            # Crear base de datos si no existe
-            from database.create_database import create_database
-            create_database()
-            logger.success("Base de datos verificada/creada")
+            database_url = os.getenv("DATABASE_URL")
             
-            # Crear tablas esenciales
-            from database.db_tables_creation import create_essential_tables
-            create_essential_tables()
+            # Detectar si es una conexión de Neon (base de datos en la nube)
+            if "neon.tech" in database_url:
+                logger.info("Detectada base de datos Neon - omitiendo creación de DB")
+                # Para Neon, la base de datos ya existe, solo creamos tablas
+            else:
+                # Para PostgreSQL local, crear base de datos si no existe
+                logger.info("Detectada base de datos local - verificando creación")
+                from database.create_database import create_database
+                create_database()
+                logger.success("Base de datos verificada/creada")
+            
+            # Crear tablas esenciales en cualquier caso
+            from database.db_tables_creation import create_all_tables
+            create_all_tables()
             logger.success("Tablas verificadas/creadas")
             
             return True

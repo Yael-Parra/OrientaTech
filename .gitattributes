@@ -1,0 +1,26 @@
+# Configuración de terminaciones de línea para OrientaTech
+
+# Por defecto, usar LF para todos los archivos de texto
+* text=auto eol=lf
+
+# Archivos específicos de Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Archivos que deben mantener sus terminaciones originales
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+
+# Archivos de Python, JavaScript, etc. - siempre LF
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
