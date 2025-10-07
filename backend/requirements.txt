@@ -35,3 +35,5 @@ pytest-mock>=3.10.0
 
 # === Mocking y Utilities ===
 unittest-mock>=1.0.1
+pgvector==0.2.4
+numpy==1.24.3
