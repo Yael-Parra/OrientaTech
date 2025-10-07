@@ -9,6 +9,26 @@ from .documents import (
     UserFolderInfo, DocumentValidator, DocumentErrorResponses
 )
 
+# Modelos de perfil de usuario
+from .user_profile import (
+    GenderEnum, EducationLevelEnum, DigitalLevelEnum,
+    UserPersonalInfoBase, UserPersonalInfoCreate, UserPersonalInfoUpdate,
+    UserPersonalInfoResponse, UserPersonalInfoWithUser
+)
+
+# Modelos de plataformas de empleo
+from .employment_platforms import (
+    PlatformTypeEnum, PlatformCategoryEnum,
+    EmploymentPlatformBase, EmploymentPlatformCreate, EmploymentPlatformUpdate,
+    EmploymentPlatformResponse, EmploymentPlatformWithStats
+)
+
+# Modelos de reseñas
+from .reviews import (
+    ReviewTypeEnum, ReviewBase, ReviewCreate, ReviewUpdate,
+    ReviewResponse, ReviewWithRelations, ReviewStats
+)
+
 __all__ = [
     # Auth models
     "UserRegister",
@@ -26,5 +46,30 @@ __all__ = [
     "DocumentUploadRequest",
     "UserFolderInfo",
     "DocumentValidator",
-    "DocumentErrorResponses"
+    "DocumentErrorResponses",
+    # User Profile models
+    "GenderEnum",
+    "EducationLevelEnum", 
+    "DigitalLevelEnum",
+    "UserPersonalInfoBase",
+    "UserPersonalInfoCreate",
+    "UserPersonalInfoUpdate",
+    "UserPersonalInfoResponse",
+    "UserPersonalInfoWithUser",
+    # Employment Platform models
+    "PlatformTypeEnum",
+    "PlatformCategoryEnum",
+    "EmploymentPlatformBase",
+    "EmploymentPlatformCreate", 
+    "EmploymentPlatformUpdate",
+    "EmploymentPlatformResponse",
+    "EmploymentPlatformWithStats",
+    # Review models
+    "ReviewTypeEnum",
+    "ReviewBase",
+    "ReviewCreate",
+    "ReviewUpdate", 
+    "ReviewResponse",
+    "ReviewWithRelations",
+    "ReviewStats"
 ]
