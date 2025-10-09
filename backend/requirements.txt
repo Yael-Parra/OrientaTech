@@ -7,7 +7,7 @@ fastapi==0.115.0
 uvicorn[standard]==0.24.0
 
 # === Base de Datos ===
-asyncpg==0.29.0
+asyncpg==0.30.0
 psycopg2-binary==2.9.9
 pgvector==0.2.4
 
@@ -20,6 +20,9 @@ python-multipart==0.0.6
 python-dotenv==1.0.0
 email-validator==2.1.0
 httpx==0.25.2
+PyPDF2==3.0.1
+spacy==3.7.2
+PyMuPDF==1.23.14
 
 # === Logging ===
 loguru==0.7.2
@@ -48,7 +51,4 @@ pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 
 # === Mocking y Utilities ===
-pgvector==0.2.4
-numpy==1.24.3
-
-asyncpg==0.30.0
+# (dependencias ya declaradas arriba)
