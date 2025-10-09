@@ -7,6 +7,8 @@ const Login = () => {
     password: '',
     remember: false
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -18,28 +20,87 @@ const Login = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    // Aquí se conectará con el backend
-    console.log('Login data:', formData)
+    ;(async () => {
+      try {
+        setError(null)
+        setLoading(true)
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: formData.email, password: formData.password })
+        })
+
+        const data = await res.json()
+        if (!res.ok) {
+          const detail = data.detail || data.message || JSON.stringify(data)
+          setError(detail)
+          setLoading(false)
+          return
+        }
+
+        // store token
+        localStorage.setItem('access_token', data.access_token)
+        localStorage.setItem('token_type', data.token_type || 'bearer')
+
+        // verify /auth/me works with token
+        const meRes = await fetch('/auth/me', {
+          headers: {
+            Authorization: `Bearer ${data.access_token}`
+          }
+        })
+        if (meRes.ok) {
+          const me = await meRes.json()
+          console.log('Authenticated user:', me)
+          // redirect to a post-login page (you can change this)
+          window.location.href = '/registro'
+        } else {
+          // still consider login successful but warn
+          setError('Login correcto pero no se pudo validar el usuario.')
+        }
+      } catch (err) {
+        console.error(err)
+        setError(err.message || 'Error de conexión')
+      } finally {
+        setLoading(false)
+      }
+    })()
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-red-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-orange-300 to-white flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Banner geométrico superior derecho */}
+      <img 
+        src="/img/Banner-geometrico-1.png" 
+        alt=""
+        className="absolute top-0 right-0 w-64 h-64 opacity-20 z-0"
+      />
+      {/* Banner geométrico inferior izquierdo */}
+      <img 
+        src="/img/Banner-geometrico-2.png" 
+        alt=""
+        className="absolute bottom-0 left-0 w-64 h-64 opacity-20 z-0"
+      />
+      
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10">
         {/* Logo y Header */}
         <div className="text-center mb-8">
-          <div className="bg-gradient-to-r from-orange-500 to-red-500 w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 2L3 7v11a1 1 0 001 1h3v-8h6v8h3a1 1 0 001-1V7l-7-5z"/>
-            </svg>
+          <div className="w-20 h-20 mx-auto mb-4 p-2 bg-white rounded-2xl shadow-lg">
+            <img 
+              src="/img/logo-factoria-f5.png" 
+              alt="Factoría F5 Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-orange-300 bg-clip-text text-transparent">
             OrientaTech
           </h1>
           <p className="text-gray-600 mt-2">Tu futuro digital comienza aquí</p>
         </div>
 
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+  {/* Formulario */}
+  <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
               Email
@@ -81,17 +142,19 @@ const Login = () => {
               />
               <span className="text-gray-600">Recordarme</span>
             </label>
-            <a href="#" className="text-orange-500 hover:text-red-500 font-medium">
+            <a href="#" className="text-orange-500 hover:text-orange-600 font-medium">
               ¿Olvidaste tu contraseña?
             </a>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transform hover:scale-105 transition duration-200 shadow-lg"
+            disabled={loading}
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-300 text-white py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-400 transform hover:scale-105 transition duration-200 shadow-lg disabled:opacity-60"
           >
-            Iniciar Sesión
+            {loading ? 'Conectando...' : 'Iniciar Sesión'}
           </button>
+          {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
         </form>
 
         {/* Divider */}

@@ -16,6 +16,9 @@ const Registration = () => {
     confirmPassword: ''
   })
 
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
   const totalSteps = 6
 
   const studyOptions = [
@@ -80,13 +83,42 @@ const Registration = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (formData.password !== formData.confirmPassword) {
-      alert('Las contraseñas no coinciden')
-      return
-    }
-    // Aquí se conectará con el backend
-    console.log('Registration data:', formData)
-    alert('¡Registro completado! Serás redirigido al login.')
+    ;(async () => {
+      try {
+        if (formData.password !== formData.confirmPassword) {
+          setError('Las contraseñas no coinciden')
+          return
+        }
+        setError(null)
+        setLoading(true)
+
+        // Build payload - send only necessary fields
+        const payload = {
+          email: formData.email,
+          password: formData.password
+        }
+
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+
+        const data = await res.json()
+        if (!res.ok) {
+          setError(data.detail || data.message || JSON.stringify(data))
+          return
+        }
+
+        // Registration successful - redirect to login
+        window.location.href = '/'
+      } catch (err) {
+        console.error(err)
+        setError(err.message || 'Error de conexión')
+      } finally {
+        setLoading(false)
+      }
+    })()
   }
 
   const renderStep = () => {
@@ -307,18 +339,33 @@ const Registration = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-red-500 to-red-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-orange-500 via-orange-300 to-white flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Banner geométrico superior derecho */}
+      <img 
+        src="/img/Banner-geometrico-1.png" 
+        alt=""
+        className="absolute top-0 right-0 w-72 h-72 opacity-15 z-0"
+      />
+      {/* Banner geométrico inferior izquierdo */}
+      <img 
+        src="/img/Banner-geometrico-2.png" 
+        alt=""
+        className="absolute bottom-0 left-0 w-72 h-72 opacity-15 z-0"
+      />
+      
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 relative z-10">
         {/* Header con logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-block">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2L3 7v11a1 1 0 001 1h3v-8h6v8h3a1 1 0 001-1V7l-7-5z"/>
-              </svg>
+            <div className="w-16 h-16 mx-auto mb-4 p-2 bg-white rounded-2xl shadow-lg">
+              <img 
+                src="/img/logo-factoria-f5.png" 
+                alt="Factoría F5 Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
           </Link>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-300 bg-clip-text text-transparent">
             OrientaTech
           </h1>
         </div>
@@ -331,7 +378,7 @@ const Registration = () => {
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
-              className="bg-gradient-to-r from-orange-500 to-red-500 h-2 rounded-full transition-all duration-300"
+              className="bg-gradient-to-r from-orange-500 to-orange-300 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentStep / totalSteps) * 100}%` }}
             ></div>
           </div>
@@ -364,20 +411,22 @@ const Registration = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition duration-200"
+                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-300 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-400 transition duration-200"
               >
                 Siguiente
               </button>
             ) : (
               <button
                 type="submit"
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition duration-200"
+                disabled={loading}
+                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-300 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-400 transition duration-200 disabled:opacity-60"
               >
-                Completar registro
+                {loading ? 'Creando cuenta...' : 'Completar registro'}
               </button>
             )}
           </div>
         </form>
+        {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
 
         {/* Footer */}
         <div className="mt-8 text-center">
