@@ -1,6 +1,8 @@
-# Database package - Simplified imports to avoid circular dependencies
+# Database package - Migration-based architecture
 from .db_connection import connect, disconnect, connect_async, disconnect_async, get_database_url
-from .db_tables_creation import create_all_tables
+from .create_database import create_database
+from .init_extensions import init_pgvector_extension
+from .migration_manager import MigrationManager
 
 __all__ = [
     # Connection functions
@@ -9,6 +11,8 @@ __all__ = [
     "connect_async",
     "disconnect_async",
     "get_database_url",
-    # Database creation functions
-    "create_all_tables"
+    # Database initialization functions
+    "create_database",
+    "init_pgvector_extension",
+    "MigrationManager"
 ]
