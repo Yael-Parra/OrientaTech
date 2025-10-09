@@ -3,7 +3,7 @@ Modelos Pydantic para información personal extendida de usuarios
 Basado en la tabla 'user_personal_info'
 """
 from pydantic import BaseModel, Field, validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
 
@@ -130,3 +130,30 @@ class UserPersonalInfoWithUser(UserPersonalInfoResponse):
     """Modelo extendido que incluye información básica del usuario"""
     user_email: Optional[str] = Field(None, description="Email del usuario")
     user_is_active: Optional[bool] = Field(None, description="Estado activo del usuario")
+
+
+class UserPersonalInfoQueries:
+   
+    @staticmethod
+    async def get_profile_by_user_id(user_id: int) -> Optional[dict]:
+        from database.db_connection import connect_async, disconnect_async
+        conn = await connect_async()
+        if not conn:
+            return None
+        
+        try:
+            query = """
+                SELECT id, user_id, full_name, date_of_birth, gender, location,
+                       education_level, previous_experience, area_of_interest,
+                       main_skills, digital_level, resume_path, updated_at
+                FROM user_personal_info 
+                WHERE user_id = $1
+            """
+            row = await conn.fetchrow(query, user_id)
+            return dict(row) if row else None
+        
+        except Exception as e:
+            print(f"Error obteniendo perfil: {e}")
+            return None
+        finally:
+            await disconnect_async(conn)

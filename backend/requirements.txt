@@ -47,5 +47,8 @@ pytest-asyncio>=0.21.0
 pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 
+# === Mocking y Utilities ===
+pgvector==0.2.4
+numpy==1.24.3
 
 asyncpg==0.30.0
