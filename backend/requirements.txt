@@ -3,7 +3,7 @@
 # ===================================
 
 # === Framework Web ===
-fastapi==0.104.1
+fastapi==0.115.0
 uvicorn[standard]==0.24.0
 
 # === Base de Datos ===
@@ -34,6 +34,5 @@ pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 
 # === Mocking y Utilities ===
-unittest-mock>=1.0.1
 pgvector==0.2.4
 numpy==1.24.3
