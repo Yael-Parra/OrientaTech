@@ -10,6 +10,20 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  const formatErrorForDisplay = (err) => {
+    if (!err) return ''
+    if (typeof err === 'string') return err
+    if (Array.isArray(err)) {
+      return err.map(e => (e.msg ? e.msg : JSON.stringify(e))).join('; ')
+    }
+    if (typeof err === 'object') {
+      if (err.detail) return formatErrorForDisplay(err.detail)
+      if (err.message) return String(err.message)
+      return JSON.stringify(err)
+    }
+    return String(err)
+  }
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -32,10 +46,10 @@ const Login = () => {
           body: JSON.stringify({ email: formData.email, password: formData.password })
         })
 
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         if (!res.ok) {
-          const detail = data.detail || data.message || JSON.stringify(data)
-          setError(detail)
+          const detailRaw = data.detail || data.message || data || 'Error'
+          setError(formatErrorForDisplay(detailRaw))
           setLoading(false)
           return
         }
@@ -53,8 +67,8 @@ const Login = () => {
         if (meRes.ok) {
           const me = await meRes.json()
           console.log('Authenticated user:', me)
-          // redirect to a post-login page (you can change this)
-          window.location.href = '/registro'
+          // redirect to dashboard after successful login
+          window.location.href = '/dashboard'
         } else {
           // still consider login successful but warn
           setError('Login correcto pero no se pudo validar el usuario.')
