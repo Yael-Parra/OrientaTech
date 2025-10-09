@@ -74,8 +74,13 @@ class DocumentService:
             # Aplicar anonimización si es un archivo PDF
             if file_path.suffix.lower() == '.pdf':
                 try:
-                    logger.info(f"Aplicando anonimización a {file_path}")
-                    result = anonymize_cv(str(file_path), verbose=False, output_name=str(file_path))
+                    logger.info(f"Aplicando anonimización a {file_path} para usuario {user_id}")
+                    result = anonymize_cv(
+                        str(file_path), 
+                        verbose=False, 
+                        output_name=str(file_path),
+                        user_id=user_id
+                    )
                     if result.success and result.output_file:
                         # Si el archivo de salida es diferente al original, reemplazar
                         if result.output_file != str(file_path):

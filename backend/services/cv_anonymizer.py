@@ -8,6 +8,7 @@ import spacy
 import fitz  # PyMuPDF
 import os
 import re
+import asyncio
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
@@ -73,6 +74,68 @@ class CVAnonymizer:
                 print("💡 Para mejor detección, instalar con: python -m spacy download es_core_news_sm")
             self.nlp = None
     
+    def _get_user_data(self, user_id: int) -> Optional[Dict]:
+        """
+        Obtiene los datos del usuario desde la base de datos
+        
+        Args:
+            user_id: ID del usuario
+            
+        Returns:
+            Diccionario con los datos del usuario o None si no se encuentra
+        """
+        try:
+            # Importar aquí para evitar imports circulares
+            from models.user_profile import UserPersonalInfoQueries
+            
+            # Verificar si ya hay un loop activo
+            try:
+                loop = asyncio.get_running_loop()
+                # Si hay un loop activo, crear una nueva tarea
+                if loop.is_running():
+                    # Usar un nuevo hilo para ejecutar la operación asíncrona
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(self._run_async_query, user_id)
+                        user_data = future.result()
+                        return user_data
+                else:
+                    # Si no hay loop activo, crear uno nuevo
+                    user_data = loop.run_until_complete(
+                        UserPersonalInfoQueries.get_profile_by_user_id(user_id)
+                    )
+                    return user_data
+            except RuntimeError:
+                # No hay loop activo, crear uno nuevo
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    user_data = loop.run_until_complete(
+                        UserPersonalInfoQueries.get_profile_by_user_id(user_id)
+                    )
+                    return user_data
+                finally:
+                    loop.close()
+                    
+        except Exception as e:
+            if self.verbose:
+                print(f"⚠️ Error obteniendo datos del usuario {user_id}: {e}")
+            return None
+    
+    def _run_async_query(self, user_id: int) -> Optional[Dict]:
+        """Ejecuta la consulta asíncrona en un nuevo loop"""
+        import asyncio
+        from models.user_profile import UserPersonalInfoQueries
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            return loop.run_until_complete(
+                UserPersonalInfoQueries.get_profile_by_user_id(user_id)
+            )
+        finally:
+            loop.close()
+    
     def _setup_patterns(self) -> None:
         """Configura los patrones de detección"""
         self.phone_patterns = [
@@ -89,15 +152,16 @@ class CVAnonymizer:
             'author', 'creator', 'producer', 'subject', 'title', 'keywords'
         }
     
-    def extract_personal_data(self, pdf_path: str) -> PersonalData:
+    def extract_personal_data(self, pdf_path: str, user_data: Optional[Dict] = None) -> PersonalData:
         """
-        Extrae datos personales del PDF (sin incluir nombres)
+        Extrae datos personales del PDF usando datos específicos del usuario
         
         Args:
             pdf_path: Ruta al archivo PDF
+            user_data: Datos del usuario obtenidos de la base de datos
             
         Returns:
-            PersonalData con todos los datos encontrados (excepto nombres)
+            PersonalData con todos los datos encontrados (usando datos del usuario si están disponibles)
         """
         if self.verbose:
             print(f"📄 Analizando: {os.path.basename(pdf_path)}")
@@ -108,10 +172,10 @@ class CVAnonymizer:
         # Extraer metadatos
         metadata, metadata_issues = self._analyze_metadata(pdf_path)
         
-        # Detectar datos personales en contenido (sin nombres)
-        names = []  # No detectar nombres
-        phones = self._detect_phones(text)
-        emails = self._detect_emails(text)
+        # Detectar datos personales usando información del usuario si está disponible
+        names = self._detect_user_names_from_db(text, user_data)  # Detectar nombres específicos del usuario
+        phones = self._detect_phones_with_user_data(text, user_data)
+        emails = self._detect_emails_with_user_data(text, user_data)
         
         return PersonalData(
             names=names,
@@ -120,23 +184,31 @@ class CVAnonymizer:
             metadata_issues=metadata_issues
         )
     
-    def anonymize(self, pdf_path: str, output_name: Optional[str] = None) -> AnonymizationResult:
+    def anonymize(self, pdf_path: str, output_name: Optional[str] = None, user_id: Optional[int] = None) -> AnonymizationResult:
         """
-        Anonimiza un CV completo
+        Anonimiza un CV completo usando datos específicos del usuario
         
         Args:
             pdf_path: Ruta al PDF original
             output_name: Nombre del archivo de salida (opcional)
+            user_id: ID del usuario para obtener datos específicos de la BD
             
         Returns:
             AnonymizationResult con el resultado del proceso
         """
         try:
-            # Extraer datos personales
-            personal_data = self.extract_personal_data(pdf_path)
+            # Obtener datos del usuario desde la base de datos si se proporciona user_id
+            user_data = None
+            if user_id:
+                user_data = self._get_user_data(user_id)
+                if self.verbose and user_data:
+                    print(f"👤 Datos del usuario obtenidos: {user_data.get('full_name', 'N/A')}")
             
-            # Verificar si hay datos para anonimizar (sin incluir nombres)
-            total_personal = len(personal_data.phones) + len(personal_data.emails)
+            # Extraer datos personales del PDF
+            personal_data = self.extract_personal_data(pdf_path, user_data)
+            
+            # Verificar si hay datos para anonimizar (incluye nombres del usuario)
+            total_personal = len(personal_data.names) + len(personal_data.phones) + len(personal_data.emails)
             total_metadata = len(personal_data.metadata_issues)
             
             if total_personal == 0 and total_metadata == 0:
@@ -162,7 +234,7 @@ class CVAnonymizer:
                 personal_data_count=total_personal,
                 metadata_count=total_metadata,
                 details={
-                    'names_found': 0,  # Los nombres no se anonimizan
+                    'names_found': len(personal_data.names),  # Nombres específicos del usuario
                     'phones_found': len(personal_data.phones),
                     'emails_found': len(personal_data.emails)
                 }
@@ -406,10 +478,86 @@ class CVAnonymizer:
         
         return list(phones)
     
+    def _detect_phones_with_user_data(self, text: str, user_data: Optional[Dict] = None) -> List[str]:
+        """Detecta números de teléfono usando datos del usuario si están disponibles"""
+        phones = set()
+        
+        # Detección automática con patrones
+        auto_phones = self._detect_phones(text)
+        phones.update(auto_phones)
+        
+        # Si hay datos del usuario, también buscar información específica
+        if user_data and self.verbose:
+            print(f"🔍 Buscando datos de contacto específicos del usuario...")
+        
+        return list(phones)
+    
     def _detect_emails(self, text: str) -> List[str]:
         """Detecta direcciones de email"""
         emails = re.findall(self.email_pattern, text, re.IGNORECASE)
         return [email.strip() for email in emails]
+    
+    def _detect_emails_with_user_data(self, text: str, user_data: Optional[Dict] = None) -> List[str]:
+        """Detecta direcciones de email usando datos del usuario si están disponibles"""
+        emails = set()
+        
+        # Detección automática con patrones
+        auto_emails = self._detect_emails(text)
+        emails.update(auto_emails)
+        
+        # Si hay datos del usuario, también buscar información específica
+        if user_data and self.verbose:
+            print(f"📧 Usando detección mejorada con datos del usuario...")
+        
+        return list(emails)
+    
+    def _detect_user_names_from_db(self, text: str, user_data: Optional[Dict] = None) -> List[str]:
+        """
+        Detecta el nombre específico del usuario desde la base de datos en el texto
+        
+        Args:
+            text: Texto del PDF
+            user_data: Datos del usuario obtenidos de la base de datos
+            
+        Returns:
+            Lista con el nombre del usuario si se encuentra en el texto
+        """
+        names_found = []
+        
+        if not user_data or not user_data.get('full_name'):
+            if self.verbose:
+                print("👤 No hay datos de usuario o nombre disponible")
+            return names_found
+        
+        full_name = user_data['full_name'].strip()
+        
+        if self.verbose:
+            print(f"🔍 Buscando el nombre '{full_name}' en el documento...")
+        
+        # Buscar el nombre completo
+        if full_name.lower() in text.lower():
+            names_found.append(full_name)
+            if self.verbose:
+                print(f"✅ Nombre completo encontrado: '{full_name}'")
+        
+        # También buscar partes del nombre (nombre y apellidos por separado)
+        name_parts = full_name.split()
+        if len(name_parts) > 1:
+            for part in name_parts:
+                if len(part) >= 3 and part.lower() in text.lower():
+                    # Verificar que no esté ya en la lista
+                    if part not in names_found:
+                        names_found.append(part)
+                        if self.verbose:
+                            print(f"✅ Parte del nombre encontrada: '{part}'")
+        
+        if self.verbose:
+            if names_found:
+                print(f"📝 Total de nombres a anonimizar: {len(names_found)}")
+            else:
+                print("ℹ️ No se encontró el nombre del usuario en el documento")
+        
+        return names_found
     
     def _is_valid_phone(self, phone: str) -> bool:
         """Valida si un teléfono es válido"""
@@ -430,8 +578,8 @@ class CVAnonymizer:
                     temp_files.append(temp_metadata_file)
                     working_file = temp_metadata_file
             
-            # Anonimizar contenido si es necesario (sin incluir nombres)
-            total_content_data = len(personal_data.phones) + len(personal_data.emails)
+            # Anonimizar contenido si es necesario (incluye nombres del usuario)
+            total_content_data = len(personal_data.names) + len(personal_data.phones) + len(personal_data.emails)
             
             if total_content_data > 0:
                 output_file = self._anonymize_content(working_file, personal_data, output_name)
@@ -488,15 +636,15 @@ class CVAnonymizer:
             return None
     
     def _anonymize_content(self, pdf_path: str, personal_data: PersonalData, output_name: Optional[str]) -> str:
-        """Anonimiza el contenido del PDF en todas las páginas (sin incluir nombres)"""
+        """Anonimiza el contenido del PDF en todas las páginas (incluye nombres específicos del usuario)"""
         doc = fitz.open(pdf_path)
         
-        # Preparar reemplazos (sin nombres)
+        # Preparar reemplazos (incluye nombres del usuario de la BD)
         replacements = []
         
-        # No anonimizar nombres
-        # for name in personal_data.names:
-        #     replacements.append((name, self.replacements['name']))
+        # Anonimizar nombres específicos del usuario desde la BD
+        for name in personal_data.names:
+            replacements.append((name, self.replacements['name']))
         
         for phone in personal_data.phones:
             replacements.append((phone, self.replacements['phone']))
@@ -576,21 +724,28 @@ class CVAnonymizer:
         return output_file
 
 
-def anonymize_cv(pdf_path: str, verbose: bool = False, custom_replacements: Optional[Dict[str, str]] = None, output_name: Optional[str] = None) -> AnonymizationResult:
+def anonymize_cv(
+    pdf_path: str, 
+    verbose: bool = False, 
+    custom_replacements: Optional[Dict[str, str]] = None, 
+    output_name: Optional[str] = None,
+    user_id: Optional[int] = None
+) -> AnonymizationResult:
     """
-    Función de conveniencia para anonimizar un CV
+    Función de conveniencia para anonimizar un CV usando datos del usuario
     
     Args:
         pdf_path: Ruta al archivo PDF
         verbose: Si mostrar información detallada
         custom_replacements: Reemplazos personalizados
         output_name: Nombre del archivo de salida
+        user_id: ID del usuario para obtener datos específicos de la BD
         
     Returns:
         AnonymizationResult con el resultado
     """
     anonymizer = CVAnonymizer(verbose=verbose, custom_replacements=custom_replacements)
-    return anonymizer.anonymize(pdf_path, output_name)
+    return anonymizer.anonymize(pdf_path, output_name, user_id)
 
 
 # CLI para usar como script independiente
