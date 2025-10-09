@@ -293,108 +293,22 @@ class CVAnonymizer:
     
     def _contains_personal_info(self, text: str) -> bool:
         """Verifica si el texto contiene información personal"""
-        # Buscar nombres personales
-        name_pattern = r'\b([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)\b'
-        names = re.findall(name_pattern, text)
-        
-        for name in names:
-            if self._is_valid_personal_name(name):
-                return True
-        
-        # Buscar emails
+        # Buscar emails (criterio principal para metadatos)
         if re.search(self.email_pattern, text, re.IGNORECASE):
             return True
             
+        # Buscar patrones de nombres simples
+        name_pattern = r'\b([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)\b'
+        names = re.findall(name_pattern, text)
+        
+        # Verificar si hay nombres que parezcan reales (al menos 2 palabras capitalizadas)
+        for name in names:
+            if len(name.strip()) > 5:  # Filtro básico por longitud
+                return True
+            
         return False
     
-    def _detect_personal_names(self, text: str) -> List[str]:
-        """Detecta nombres personales en el texto de forma más agresiva"""
-        candidates = set()
-        
-        # spaCy NER - Solo si está disponible
-        if self.nlp is not None:
-            doc = self.nlp(text)
-            for ent in doc.ents:
-                if ent.label_ == 'PER' and len(ent.text.strip()) > 1:
-                    # Limpiar y normalizar el nombre detectado por spaCy
-                    name = ent.text.strip()
-                    # Remover caracteres no deseados pero mantener acentos
-                    name = re.sub(r'[^\w\sáéíóúüñÁÉÍÓÚÜÑ]', ' ', name)
-                    name = ' '.join(name.split())  # Normalizar espacios
-                    if len(name) > 1:
-                        candidates.add(name)
-        
-        # Búsqueda en todo el documento, no solo las primeras líneas
-        lines = text.split('\n')
-        
-        # Patrón muy agresivo para nombres (cualquier combinación de palabras capitalizadas)
-        name_patterns = [
-            # Nombres completos (2+ palabras capitalizadas)
-            r'\b([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)+)\b',
-            # Nombres al inicio de línea
-            r'^([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)*)',
-            # Nombres después de "Nombre:", "Name:", etc.
-            r'(?:nombre|name|apellidos?)\s*:?\s*([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+(?:\s+[A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]+)*)',
-        ]
-        
-        # Buscar en las primeras 20 líneas (donde suelen estar los nombres)
-        first_lines = '\n'.join(lines[:20])
-        
-        for pattern in name_patterns:
-            matches = re.findall(pattern, first_lines, re.MULTILINE | re.IGNORECASE)
-            for match in matches:
-                if isinstance(match, tuple):
-                    match = match[0]
-                name = match.strip()
-                if len(name) > 1:
-                    candidates.add(name)
-        
-        # También buscar nombres sueltos (una sola palabra) que puedan ser nombres propios
-        single_name_pattern = r'\b([A-ZÁÉÍÓÚÑÜ][a-záéíóúñü]{2,15})\b'
-        single_matches = re.findall(single_name_pattern, first_lines)
-        for name in single_matches:
-            if self._could_be_first_name(name):
-                candidates.add(name)
-        
-        # Filtrar nombres válidos con criterios muy relajados
-        valid_names = [name for name in candidates if self._is_valid_name_relaxed(name)]
-        
-        # Eliminar duplicados/contenidos
-        filtered_names = self._filter_duplicate_names(valid_names)
-        
-        if self.verbose and filtered_names:
-            print(f"🔍 Nombres detectados: {filtered_names}")
-        
-        return filtered_names
-    
-    def _could_be_first_name(self, word: str) -> bool:
-        """Verifica si una palabra podría ser un nombre propio"""
-        word = word.strip()
-        
-        # Lista básica de nombres comunes españoles para ayudar en la detección
-        common_first_names = {
-            'maría', 'carmen', 'ana', 'isabel', 'pilar', 'dolores', 'teresa', 'laura',
-            'cristina', 'marta', 'patricia', 'sandra', 'elena', 'sara', 'paula',
-            'antonio', 'manuel', 'francisco', 'david', 'josé', 'juan', 'javier',
-            'daniel', 'carlos', 'miguel', 'alejandro', 'fernando', 'sergio', 'pablo',
-            'jorge', 'rafael', 'ángel', 'andrés', 'alberto', 'luis', 'rubén',
-            'adrián', 'iván', 'raúl', 'víctor', 'roberto', 'pedro', 'marcos'
-        }
-        
-        word_lower = word.lower()
-        
-        # Si está en la lista de nombres comunes
-        if word_lower in common_first_names:
-            return True
-        
-        # Si tiene características de nombre (3-15 caracteres, empezar con mayúscula)
-        if (3 <= len(word) <= 15 and 
-            word[0].isupper() and 
-            word[1:].islower() and
-            word.isalpha()):
-            return True
-        
-        return False
+
     
     def _is_valid_name_relaxed(self, name: str) -> bool:
         """Validación muy relajada para nombres - más agresiva en la detección"""
@@ -440,13 +354,7 @@ class CVAnonymizer:
         
         return True
 
-    def _is_valid_personal_name(self, name: str) -> bool:
-        """Valida si es un nombre personal real (función de compatibilidad)"""
-        return self._is_valid_name_relaxed(name)
-    
-    def _is_valid_personal_name_improved(self, name: str) -> bool:
-        """Función de compatibilidad"""
-        return self._is_valid_name_relaxed(name)
+
     
     def _filter_duplicate_names(self, names: List[str]) -> List[str]:
         """Filtra nombres duplicados o contenidos en otros"""
