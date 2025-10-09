@@ -1,7 +1,7 @@
 import os
 import re
 from loguru import logger
-from db_connection import connect_to_postgres_server
+from .db_connection import connect_to_postgres_server
 
 def validate_database_name(name: str) -> bool:
     """
@@ -27,7 +27,7 @@ def create_database():
         logger.error("DB_PROJECT is not defined in environment variables")
         return
     
-    # Валидация имени базы данных для предотвращения SQL injection
+    # Validate database name to prevent SQL injection
     if not validate_database_name(db_name):
         logger.error(f"Invalid database name: '{db_name}'. Only letters, numbers and underscores are allowed.")
         return
@@ -47,7 +47,7 @@ def create_database():
         if exists:
             logger.info(f"Database '{db_name}' already exists")
         else:
-            # Используем параметризованный запрос для безопасности
+            # Use parameterized query for security
             cursor.execute("CREATE DATABASE %s", (db_name,))
             logger.info(f"Database '{db_name}' created successfully")
             
