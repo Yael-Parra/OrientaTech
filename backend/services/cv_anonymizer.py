@@ -62,13 +62,16 @@ class CVAnonymizer:
         self._setup_patterns()
     
     def _load_nlp_model(self) -> None:
-        """Carga el modelo de spaCy"""
+        """Carga el modelo de spaCy si está disponible"""
         try:
             self.nlp = spacy.load("es_core_news_sm")
             if self.verbose:
                 print("✅ Modelo spaCy cargado")
         except OSError:
-            raise RuntimeError("Modelo spaCy 'es_core_news_sm' no encontrado. Instalar con: python -m spacy download es_core_news_sm")
+            if self.verbose:
+                print("⚠️ Modelo spaCy 'es_core_news_sm' no encontrado. Funcionando con patrones básicos.")
+                print("💡 Para mejor detección, instalar con: python -m spacy download es_core_news_sm")
+            self.nlp = None
     
     def _setup_patterns(self) -> None:
         """Configura los patrones de detección"""
@@ -88,13 +91,13 @@ class CVAnonymizer:
     
     def extract_personal_data(self, pdf_path: str) -> PersonalData:
         """
-        Extrae datos personales del PDF
+        Extrae datos personales del PDF (sin incluir nombres)
         
         Args:
             pdf_path: Ruta al archivo PDF
             
         Returns:
-            PersonalData con todos los datos encontrados
+            PersonalData con todos los datos encontrados (excepto nombres)
         """
         if self.verbose:
             print(f"📄 Analizando: {os.path.basename(pdf_path)}")
@@ -105,8 +108,8 @@ class CVAnonymizer:
         # Extraer metadatos
         metadata, metadata_issues = self._analyze_metadata(pdf_path)
         
-        # Detectar datos personales en contenido
-        names = self._detect_personal_names(text)
+        # Detectar datos personales en contenido (sin nombres)
+        names = []  # No detectar nombres
         phones = self._detect_phones(text)
         emails = self._detect_emails(text)
         
@@ -132,8 +135,8 @@ class CVAnonymizer:
             # Extraer datos personales
             personal_data = self.extract_personal_data(pdf_path)
             
-            # Verificar si hay datos para anonimizar
-            total_personal = len(personal_data.names) + len(personal_data.phones) + len(personal_data.emails)
+            # Verificar si hay datos para anonimizar (sin incluir nombres)
+            total_personal = len(personal_data.phones) + len(personal_data.emails)
             total_metadata = len(personal_data.metadata_issues)
             
             if total_personal == 0 and total_metadata == 0:
@@ -159,7 +162,7 @@ class CVAnonymizer:
                 personal_data_count=total_personal,
                 metadata_count=total_metadata,
                 details={
-                    'names_found': len(personal_data.names),
+                    'names_found': 0,  # Los nombres no se anonimizan
                     'phones_found': len(personal_data.phones),
                     'emails_found': len(personal_data.emails)
                 }
@@ -236,17 +239,18 @@ class CVAnonymizer:
         """Detecta nombres personales en el texto de forma más agresiva"""
         candidates = set()
         
-        # spaCy NER - Más permisivo
-        doc = self.nlp(text)
-        for ent in doc.ents:
-            if ent.label_ == 'PER' and len(ent.text.strip()) > 1:
-                # Limpiar y normalizar el nombre detectado por spaCy
-                name = ent.text.strip()
-                # Remover caracteres no deseados pero mantener acentos
-                name = re.sub(r'[^\w\sáéíóúüñÁÉÍÓÚÜÑ]', ' ', name)
-                name = ' '.join(name.split())  # Normalizar espacios
-                if len(name) > 1:
-                    candidates.add(name)
+        # spaCy NER - Solo si está disponible
+        if self.nlp is not None:
+            doc = self.nlp(text)
+            for ent in doc.ents:
+                if ent.label_ == 'PER' and len(ent.text.strip()) > 1:
+                    # Limpiar y normalizar el nombre detectado por spaCy
+                    name = ent.text.strip()
+                    # Remover caracteres no deseados pero mantener acentos
+                    name = re.sub(r'[^\w\sáéíóúüñÁÉÍÓÚÜÑ]', ' ', name)
+                    name = ' '.join(name.split())  # Normalizar espacios
+                    if len(name) > 1:
+                        candidates.add(name)
         
         # Búsqueda en todo el documento, no solo las primeras líneas
         lines = text.split('\n')
@@ -426,8 +430,8 @@ class CVAnonymizer:
                     temp_files.append(temp_metadata_file)
                     working_file = temp_metadata_file
             
-            # Anonimizar contenido si es necesario
-            total_content_data = len(personal_data.names) + len(personal_data.phones) + len(personal_data.emails)
+            # Anonimizar contenido si es necesario (sin incluir nombres)
+            total_content_data = len(personal_data.phones) + len(personal_data.emails)
             
             if total_content_data > 0:
                 output_file = self._anonymize_content(working_file, personal_data, output_name)
@@ -484,14 +488,15 @@ class CVAnonymizer:
             return None
     
     def _anonymize_content(self, pdf_path: str, personal_data: PersonalData, output_name: Optional[str]) -> str:
-        """Anonimiza el contenido del PDF en todas las páginas"""
+        """Anonimiza el contenido del PDF en todas las páginas (sin incluir nombres)"""
         doc = fitz.open(pdf_path)
         
-        # Preparar reemplazos
+        # Preparar reemplazos (sin nombres)
         replacements = []
         
-        for name in personal_data.names:
-            replacements.append((name, self.replacements['name']))
+        # No anonimizar nombres
+        # for name in personal_data.names:
+        #     replacements.append((name, self.replacements['name']))
         
         for phone in personal_data.phones:
             replacements.append((phone, self.replacements['phone']))

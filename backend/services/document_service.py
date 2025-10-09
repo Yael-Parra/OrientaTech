@@ -75,9 +75,13 @@ class DocumentService:
             if file_path.suffix.lower() == '.pdf':
                 try:
                     logger.info(f"Aplicando anonimización a {file_path}")
-                    result = anonymize_cv(str(file_path), verbose=True)
-                    if result:
+                    result = anonymize_cv(str(file_path), verbose=False, output_name=str(file_path))
+                    if result.success and result.output_file:
+                        # Si el archivo de salida es diferente al original, reemplazar
+                        if result.output_file != str(file_path):
+                            shutil.move(result.output_file, str(file_path))
                         logger.info(f"Anonimización completada para {file_path}")
+                        logger.info(f"Datos anonimizados: {result.personal_data_count + result.metadata_count}")
                     else:
                         logger.warning(f"La anonimización no produjo cambios en {file_path}")
                 except Exception as e:
