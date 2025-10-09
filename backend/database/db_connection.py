@@ -29,6 +29,37 @@ def get_database_url():
     
     return new_database_url
 
+def connect_to_postgres_server(database_name="postgres"):
+    """
+    Connect to PostgreSQL server with specified database.
+    
+    Args:
+        database_name (str): Name of the database to connect to. Defaults to 'postgres'.
+        
+    Returns:
+        psycopg2.extensions.connection: Database connection or None if failed
+    """
+    try:
+        database_url = os.getenv("DATABASE_URL")
+        
+        if not database_url:
+            raise ValueError("DATABASE_URL is not defined in environment variables")
+        
+        # Parse the URL and connect to the specified database
+        parsed_url = urlparse(database_url)
+        
+        # Connect to specified database
+        server_database_url = f"{parsed_url.scheme}://{parsed_url.netloc}/{database_name}"
+        if parsed_url.query:
+            server_database_url += f"?{parsed_url.query}"
+        
+        conn = psycopg2.connect(server_database_url)
+        logger.info(f"Connected to PostgreSQL server (database: {database_name})")
+        return conn
+    except Exception as e:
+        logger.error(f"Error while connecting to PostgreSQL server: {e}")
+        return None
+
 def connect():
     """Synchronous connection using psycopg2"""
     try:

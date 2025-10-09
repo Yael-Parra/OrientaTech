@@ -5,9 +5,10 @@ import jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Cargar variables de entorno
-load_dotenv()
+# Cargar variables de entorno desde backend/.env
+load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
 
 # Configuración JWT
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "fallback_secret_key")

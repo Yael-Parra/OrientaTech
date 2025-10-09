@@ -1,34 +1,24 @@
 import os
-import psycopg2
-from dotenv import load_dotenv
+import re
 from loguru import logger
-from urllib.parse import urlparse
+from db_connection import connect_to_postgres_server
 
-# Load environment variables
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
-
-def connect_to_postgres():
-    """Connect to PostgreSQL server (without specifying a database)"""
-    try:
-        database_url = os.getenv("DATABASE_URL")
+def validate_database_name(name: str) -> bool:
+    """
+    Validate database name to prevent SQL injection.
+    
+    Args:
+        name (str): Database name to validate
         
-        if not database_url:
-            raise ValueError("DATABASE_URL is not defined in environment variables")
-        
-        # Parse the URL and connect to the default postgres database
-        parsed_url = urlparse(database_url)
-        
-        # Connect to 'postgres' database instead of the target database
-        default_database_url = f"{parsed_url.scheme}://{parsed_url.netloc}/postgres"
-        if parsed_url.query:
-            default_database_url += f"?{parsed_url.query}"
-        
-        conn = psycopg2.connect(default_database_url)
-        logger.info("Connected to PostgreSQL server")
-        return conn
-    except Exception as e:
-        logger.error(f"Error while connecting to PostgreSQL server: {e}")
-        return None
+    Returns:
+        bool: True if name is valid, False otherwise
+    """
+    if not name:
+        return False
+    
+    
+    pattern = r'^[a-zA-Z][a-zA-Z0-9_]*$'
+    return bool(re.match(pattern, name))
 
 def create_database():
     """Create the target database"""
@@ -37,7 +27,12 @@ def create_database():
         logger.error("DB_PROJECT is not defined in environment variables")
         return
     
-    conn = connect_to_postgres()
+    # Валидация имени базы данных для предотвращения SQL injection
+    if not validate_database_name(db_name):
+        logger.error(f"Invalid database name: '{db_name}'. Only letters, numbers and underscores are allowed.")
+        return
+    
+    conn = connect_to_postgres_server()
     if conn is None:
         return
 
@@ -52,7 +47,8 @@ def create_database():
         if exists:
             logger.info(f"Database '{db_name}' already exists")
         else:
-            cursor.execute(f'CREATE DATABASE "{db_name}";')
+            # Используем параметризованный запрос для безопасности
+            cursor.execute("CREATE DATABASE %s", (db_name,))
             logger.info(f"Database '{db_name}' created successfully")
             
     except Exception as e:
