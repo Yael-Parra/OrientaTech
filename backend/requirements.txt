@@ -14,6 +14,7 @@ pgvector==0.2.4
 # === Autenticacion y Seguridad ===
 PyJWT==2.8.0
 passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
 
 # === Utilidades Web ===
 python-multipart==0.0.6
@@ -32,9 +33,9 @@ loguru==0.7.2
 # ===================================
 
 # === Embeddings y Transformers ===
-sentence-transformers==2.2.2
-transformers==4.35.0
-torch==2.1.0
+#sentence-transformers==2.2.2
+#transformers==4.35.0
+#torch==2.1.0
 
 # === Utilidades ML ===
 numpy==1.24.3

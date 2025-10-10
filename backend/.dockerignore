@@ -1,0 +1,55 @@
+# ===================================
+# Backend - .dockerignore
+# ===================================
+
+# Entorno virtual
+.venv/
+venv/
+env/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Tests y coverage
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+pytest.ini
+
+# Logs
+*.log
+logs/
+
+# Variables de entorno locales
+.env
+.env.local
+.env.example
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+
+# Archivos de backup
+*.bak
+*.backup
