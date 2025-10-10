@@ -3,6 +3,7 @@ from .db_connection import connect, disconnect, connect_async, disconnect_async,
 from .create_database import create_database
 from .init_extensions import init_pgvector_extension
 from .migration_manager import MigrationManager
+from .db_tables_creation import create_all_tables  # DEPRECATED - use migrations instead
 
 __all__ = [
     # Connection functions
@@ -14,5 +15,7 @@ __all__ = [
     # Database initialization functions
     "create_database",
     "init_pgvector_extension",
-    "MigrationManager"
+    "MigrationManager",
+    # DEPRECATED functions
+    "create_all_tables"  # DEPRECATED - use MigrationManager instead
 ]
