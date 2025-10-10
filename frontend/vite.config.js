@@ -22,6 +22,13 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/profile/, '/profile'),
       },
+      // Proxy calls starting with /documents to the FastAPI backend
+      '/documents': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/documents/, '/documents'),
+      },
     },
   },
 })

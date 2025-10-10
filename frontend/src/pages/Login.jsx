@@ -88,16 +88,16 @@ const Login = () => {
       <img 
         src="/img/Banner-geometrico-1.png" 
         alt=""
-        className="absolute top-0 right-0 w-64 h-64 opacity-20 z-0"
+        className="absolute top-0 right-0 w-64 h-64 object-contain opacity-15 z-0 pointer-events-none"
       />
       {/* Banner geométrico inferior izquierdo */}
       <img 
         src="/img/Banner-geometrico-2.png" 
         alt=""
-        className="absolute bottom-0 left-0 w-64 h-64 opacity-20 z-0"
+        className="absolute bottom-0 left-0 w-64 h-64 object-contain opacity-15 z-0 pointer-events-none"
       />
       
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative z-10">
         {/* Logo y Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 mx-auto mb-4 p-2 bg-white rounded-2xl shadow-lg">
@@ -113,8 +113,8 @@ const Login = () => {
           <p className="text-gray-600 mt-2">Tu futuro digital comienza aquí</p>
         </div>
 
-  {/* Formulario */}
-  <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Formulario */}
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-gray-700 font-semibold mb-2">
               Email
