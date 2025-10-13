@@ -12,6 +12,7 @@ from routes.user_profile_routes import profile_router
 from routes.system_routes import system_router
 from routes.reviews_routes import reviews_router
 from routes.employment_platforms_routes import platforms_router
+from routes.rag_routes import rag_router
 from services.setup_service import setup_service
 from pathlib import Path
 
@@ -94,6 +95,10 @@ app = FastAPI(
         {
             "name": "💼 Employment Platforms",
             "description": "Gestión de plataformas de empleo. Consulta, creación y estadísticas de plataformas laborales con filtros avanzados.",
+        },
+        {
+            "name": "🔍 RAG Search",
+            "description": "Sistema de búsqueda semántica con IA. Búsqueda inteligente de documentos usando embeddings vectoriales y similitud semántica.",
         }
     ]
 )
@@ -115,6 +120,7 @@ app.include_router(documents_router)
 app.include_router(platforms_router)
 app.include_router(reviews_router)
 app.include_router(github_router)
+app.include_router(rag_router)
 
 if __name__ == "__main__":
     import uvicorn
