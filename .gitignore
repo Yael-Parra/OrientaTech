@@ -161,3 +161,5 @@ docs/
 
 # Archivos de sistema Windows
 desktop.ini
+
+models_cache/

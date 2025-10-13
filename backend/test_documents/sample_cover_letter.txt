@@ -1,0 +1,65 @@
+COVER LETTER
+
+Maria Garcia Rodriguez
+Barcelona, Spain
+maria.garcia@email.com
++34 987 654 321
+
+Date: October 13, 2024
+
+Hiring Manager
+Tech Innovations Corp
+Madrid, Spain
+
+Dear Hiring Manager,
+
+I am writing to express my strong interest in the Senior Full-Stack Developer position
+at Tech Innovations Corp. With over 5 years of professional experience in web development
+and a proven track record of delivering high-quality, scalable applications, I am excited
+about the opportunity to contribute to your innovative team.
+
+Throughout my career, I have developed expertise in both frontend and backend technologies,
+with particular strength in React, TypeScript, Node.js, and cloud-based solutions. At my
+current role with Digital Solutions Inc., I have successfully led the development of
+enterprise web applications serving over 100,000 users, implementing best practices in
+code quality, performance optimization, and team collaboration.
+
+What particularly attracts me to Tech Innovations Corp is your commitment to cutting-edge
+technology and innovative solutions. Your recent work on AI-powered applications and
+microservices architecture aligns perfectly with my professional interests and experience.
+I am especially impressed by your company's focus on continuous learning and professional
+development.
+
+Key highlights of my qualifications include:
+
+• Extensive experience with modern JavaScript frameworks (React, Vue.js, Angular)
+• Strong backend development skills with Node.js, Express, and Python
+• Proven ability to architect and implement scalable, maintainable solutions
+• Experience with cloud platforms (AWS, Azure) and DevOps practices
+• Track record of mentoring junior developers and leading technical initiatives
+• Excellent communication skills and ability to work in agile environments
+
+I am particularly excited about the opportunity to work on projects that leverage the latest
+technologies while maintaining high standards of code quality and user experience. My passion
+for continuous learning and staying current with industry trends has enabled me to consistently
+deliver innovative solutions that exceed expectations.
+
+I am confident that my technical expertise, combined with my collaborative approach and
+dedication to excellence, would make me a valuable addition to your team. I am eager to
+bring my skills in full-stack development, problem-solving, and team leadership to contribute
+to Tech Innovations Corp's continued success.
+
+I would welcome the opportunity to discuss how my experience and skills can benefit your
+organization. Thank you for considering my application. I look forward to the possibility
+of speaking with you soon.
+
+Sincerely,
+
+Maria Garcia Rodriguez
+
+
+Attachments:
+- Curriculum Vitae
+- Portfolio (available at: portfolio.mariagarcia.dev)
+- Professional References (available upon request)
+

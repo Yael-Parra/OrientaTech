@@ -1,0 +1,129 @@
+CURRICULUM VITAE
+
+Name: Dr. Alex Chen
+Email: alex.chen@datamail.com
+Phone: +1 555 123 4567
+Location: San Francisco, CA, USA
+LinkedIn: linkedin.com/in/alexchen-ds
+GitHub: github.com/alexchen-data
+
+PROFESSIONAL SUMMARY:
+Senior Data Scientist with 6+ years of experience in machine learning, deep learning,
+and statistical analysis. Expertise in building predictive models, implementing NLP
+solutions, and deploying AI systems at scale. Ph.D. in Computer Science with focus
+on artificial intelligence and neural networks.
+
+WORK EXPERIENCE:
+
+Senior Data Scientist | AI Research Labs | 2021-Present
+• Developed and deployed machine learning models for recommendation systems serving 10M+ users
+• Implemented NLP solutions using transformers and BERT models for text classification
+• Built vector search systems using embeddings and similarity matching (pgvector, FAISS)
+• Designed and conducted A/B tests to measure model performance improvements
+• Led team of 3 data scientists on RAG (Retrieval-Augmented Generation) project
+• Technologies: Python, TensorFlow, PyTorch, Scikit-learn, Hugging Face Transformers,
+  PostgreSQL, pgvector, FastAPI, Docker, AWS SageMaker
+
+Data Scientist | Analytics Corporation | 2019-2021
+• Created predictive models for customer churn prediction with 85% accuracy
+• Implemented time-series forecasting models for demand prediction
+• Developed data pipelines for ETL processes handling 1TB+ daily data
+• Collaborated with engineering teams to productionize ML models
+• Technologies: Python, Pandas, NumPy, Scikit-learn, XGBoost, SQL, Airflow, Spark
+
+Machine Learning Engineer | Tech Startup | 2017-2019
+• Built computer vision models for image classification and object detection
+• Implemented recommendation algorithms using collaborative filtering
+• Developed API endpoints for model serving using Flask and FastAPI
+• Technologies: Python, Keras, TensorFlow, OpenCV, Flask, Redis, MongoDB
+
+TECHNICAL SKILLS:
+
+Programming Languages:
+• Python (Advanced), SQL, R, Java, JavaScript
+
+Machine Learning & AI:
+• Deep Learning: TensorFlow, PyTorch, Keras
+• NLP: Transformers, BERT, GPT, Sentence-BERT, spaCy
+• Computer Vision: OpenCV, YOLO, ResNet
+• Classical ML: Scikit-learn, XGBoost, LightGBM
+• Vector Databases: pgvector, Pinecone, FAISS, Weaviate
+
+Data Processing & Analysis:
+• Pandas, NumPy, SciPy
+• Apache Spark, Dask
+• Data visualization: Matplotlib, Seaborn, Plotly
+
+Databases:
+• PostgreSQL, MySQL, MongoDB
+• Vector search and semantic similarity
+• Query optimization and indexing
+
+MLOps & Deployment:
+• Docker, Kubernetes
+• MLflow, Weights & Biases
+• AWS (SageMaker, EC2, S3, Lambda)
+• FastAPI, Flask
+• CI/CD for ML models
+
+RAG & LLM Technologies:
+• Retrieval-Augmented Generation systems
+• Embedding generation and vector search
+• Semantic search implementation
+• LangChain, LlamaIndex
+• Prompt engineering
+
+EDUCATION:
+
+Ph.D. in Computer Science
+Stanford University | 2013-2017
+Dissertation: "Neural Network Architectures for Natural Language Understanding"
+
+Master's Degree in Data Science
+MIT | 2011-2013
+
+Bachelor's Degree in Mathematics & Computer Science
+UC Berkeley | 2007-2011
+
+PUBLICATIONS:
+• "Efficient Vector Search for Large-Scale Semantic Retrieval" - NeurIPS 2023
+• "Improving RAG Systems with Hybrid Search Approaches" - ACL 2022
+• "Deep Learning for Document Understanding" - ICML 2021
+
+CERTIFICATIONS:
+• AWS Certified Machine Learning Specialty (2023)
+• TensorFlow Developer Certificate (2022)
+• Deep Learning Specialization - Coursera (2020)
+
+PROJECTS:
+
+Document Search Engine (RAG System):
+• Built semantic search engine using sentence-transformers and pgvector
+• Implemented retrieval-augmented generation for intelligent document query
+• Achieved 92% accuracy in document relevance ranking
+• Stack: Python, FastAPI, PostgreSQL, pgvector, Sentence-BERT
+
+Customer Analytics Platform:
+• Developed ML pipeline for customer segmentation and behavior prediction
+• Reduced customer churn by 25% through predictive interventions
+• Stack: Python, Scikit-learn, Airflow, PostgreSQL, Tableau
+
+Real-time Recommendation System:
+• Built collaborative filtering system processing 100K+ requests/second
+• Implemented online learning for continuous model improvement
+• Stack: Python, TensorFlow, Redis, Kafka, Kubernetes
+
+LANGUAGES:
+• English: Native
+• Mandarin Chinese: Native
+• Spanish: Intermediate (B2)
+
+AWARDS & ACHIEVEMENTS:
+• Best Paper Award, NeurIPS 2023
+• Kaggle Competition: Top 1% ranking (2022)
+• Outstanding Ph.D. Thesis Award, Stanford University (2017)
+
+INTERESTS:
+Research in NLP and RAG systems, Open source contributions, Tech conferences,
+Teaching and mentoring, Reading research papers
+

@@ -1,0 +1,86 @@
+CURRICULUM VITAE
+
+Name: Maria Garcia Rodriguez
+Email: maria.garcia@email.com
+Phone: +34 987 654 321
+Location: Barcelona, Spain
+
+PROFESSIONAL SUMMARY:
+Experienced Full-Stack Developer with 5+ years of expertise in modern web technologies,
+specializing in React, Node.js, and cloud-based solutions. Passionate about creating
+scalable applications and implementing best practices in software development.
+
+WORK EXPERIENCE:
+
+Senior Frontend Developer | Digital Solutions Inc. | 2021-2024
+• Led development of enterprise web applications using React and TypeScript
+• Implemented responsive designs and optimized performance for 100K+ users
+• Mentored junior developers and conducted code reviews
+• Technologies: React, Redux, TypeScript, Material-UI, Jest, Webpack
+
+Full-Stack Developer | WebTech Solutions | 2019-2021
+• Developed RESTful APIs using Node.js and Express
+• Built modern SPAs with React and Vue.js
+• Integrated third-party services and payment gateways
+• Technologies: Node.js, Express, MongoDB, React, Vue.js, Docker
+
+Junior Developer | StartupHub | 2018-2019
+• Collaborated on front-end development using HTML, CSS, JavaScript
+• Assisted in database design and implementation
+• Participated in agile development processes
+• Technologies: JavaScript, jQuery, MySQL, Bootstrap
+
+TECHNICAL SKILLS:
+
+Programming Languages:
+• JavaScript/TypeScript, Python, HTML5, CSS3, SQL
+
+Frontend Technologies:
+• React, Vue.js, Angular, Redux, Next.js
+• Material-UI, Tailwind CSS, Styled Components
+• Webpack, Vite, npm, yarn
+
+Backend Technologies:
+• Node.js, Express, NestJS
+• Python, Flask
+• RESTful APIs, GraphQL, WebSockets
+
+Databases:
+• MongoDB, PostgreSQL, MySQL, Redis
+• Database design and optimization
+
+DevOps & Tools:
+• Git, GitHub, GitLab
+• Docker, Kubernetes
+• CI/CD pipelines
+• AWS, Azure cloud services
+• Agile methodologies, Scrum
+
+EDUCATION:
+
+Master's Degree in Computer Science
+Technical University of Barcelona | 2016-2018
+Specialization: Software Engineering
+
+Bachelor's Degree in Information Technology
+University of Valencia | 2012-2016
+
+CERTIFICATIONS:
+• AWS Certified Developer Associate (2023)
+• Professional Scrum Master I (2022)
+• React Developer Certification (2021)
+
+LANGUAGES:
+• Spanish: Native
+• English: Professional (C1)
+• Catalan: Professional (C1)
+• French: Intermediate (B1)
+
+PROJECTS:
+• E-commerce Platform: Built scalable online shopping platform handling 50K transactions/month
+• Real-time Dashboard: Created analytics dashboard with live data visualization
+• Mobile App: Developed cross-platform mobile application using React Native
+
+INTERESTS:
+Open source contributions, Tech meetups, Continuous learning, UI/UX design
+
