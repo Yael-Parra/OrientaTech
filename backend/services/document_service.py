@@ -16,6 +16,7 @@ from models.documents import (
     DocumentValidator, DocumentErrorResponses
 )
 from services.document_utils import DocumentUtils
+from services.cv_anonymizer import anonymize_cv
 
 class DocumentService:
     """Servicio principal para gestión de documentos de usuario"""
@@ -70,6 +71,28 @@ class DocumentService:
             with open(file_path, 'wb') as f:
                 f.write(file_content)
             
+            # Aplicar anonimización si es un archivo PDF
+            if file_path.suffix.lower() == '.pdf':
+                try:
+                    logger.info(f"Aplicando anonimización a {file_path} para usuario {user_id}")
+                    result = anonymize_cv(
+                        str(file_path), 
+                        verbose=False, 
+                        output_name=str(file_path),
+                        user_id=user_id
+                    )
+                    if result.success and result.output_file:
+                        # Si el archivo de salida es diferente al original, reemplazar
+                        if result.output_file != str(file_path):
+                            shutil.move(result.output_file, str(file_path))
+                        logger.info(f"Anonimización completada para {file_path}")
+                        logger.info(f"Datos anonimizados: {result.personal_data_count + result.metadata_count}")
+                    else:
+                        logger.warning(f"La anonimización no produjo cambios en {file_path}")
+                except Exception as e:
+                    logger.error(f"Error en anonimización de {file_path}: {str(e)}")
+                    # No lanzamos excepción, el archivo se guarda sin anonimizar
+
             # Crear información del documento
             doc_id = str(uuid.uuid4())
             doc_info = {

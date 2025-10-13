@@ -11,7 +11,8 @@ from datetime import datetime
 from models.user_profile import (
     UserPersonalInfoCreate, 
     UserPersonalInfoUpdate, 
-    UserPersonalInfoResponse
+    UserPersonalInfoResponse,
+    UserPersonalInfoQueries
 )
 
 # Imports de autenticación
@@ -34,27 +35,11 @@ profile_router = APIRouter(
 
 # Funciones auxiliares para base de datos
 async def get_profile_by_user_id(user_id: int) -> Optional[dict]:
-    """Obtener perfil por ID de usuario"""
-    conn = await connect_async()
-    if not conn:
-        return None
-    
-    try:
-        query = """
-            SELECT id, user_id, full_name, date_of_birth, gender, location,
-                   education_level, previous_experience, area_of_interest,
-                   main_skills, digital_level, resume_path, updated_at
-            FROM user_personal_info 
-            WHERE user_id = $1
-        """
-        row = await conn.fetchrow(query, user_id)
-        return dict(row) if row else None
-    
-    except Exception as e:
-        print(f"Error obteniendo perfil: {e}")
-        return None
-    finally:
-        await disconnect_async(conn)
+    """
+    Obtener perfil por ID de usuario
+    REFACTORIZADO: Ahora usa UserPersonalInfoQueries.get_profile_by_user_id()
+    """
+    return await UserPersonalInfoQueries.get_profile_by_user_id(user_id)
 
 async def create_profile_db(user_id: int, profile_data: dict) -> Optional[dict]:
     """Crear nuevo perfil en base de datos"""
