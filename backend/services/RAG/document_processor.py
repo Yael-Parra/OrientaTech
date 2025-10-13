@@ -113,24 +113,100 @@ class DocumentProcessor:
         """
         try:
             text_content = []
+            page_count = 0
             
-            # Open PDF
+            # Open PDF with additional validation
             with fitz.open(file_path) as pdf_document:
+                try:
+                    # Check if PDF is valid and accessible
+                    page_count = len(pdf_document)
+                    logger.debug(f"PDF has {page_count} pages")
+                except Exception as len_error:
+                    logger.error(f"Cannot determine page count for {file_path.name}: {len_error}")
+                    raise RuntimeError(f"Invalid or corrupted PDF: {len_error}")
+                
                 # Extract text from each page
-                for page_num in range(len(pdf_document)):
-                    page = pdf_document[page_num]
-                    text = page.get_text()
-                    text_content.append(text)
+                for page_num in range(page_count):
+                    try:
+                        page = pdf_document[page_num]
+                        text = page.get_text()
+                        if text.strip():  # Only add non-empty pages
+                            text_content.append(text)
+                    except Exception as page_error:
+                        logger.warning(f"Cannot extract text from page {page_num + 1}: {page_error}")
+                        continue  # Skip problematic pages
             
             # Join all pages
             full_text = "\n\n".join(text_content)
             
-            logger.debug(f"Extracted text from {len(pdf_document)} pages")
+            if not full_text.strip():
+                raise RuntimeError("No text content found in PDF")
+            
+            logger.debug(f"Extracted text from {page_count} pages ({len(text_content)} pages with content)")
+            return full_text
+            
+        except RuntimeError:
+            # Re-raise our custom errors
+            raise
+        except Exception as e:
+            logger.error(f"Error extracting from PDF {file_path.name}: {e}")
+            # Try alternative extraction method
+            logger.info(f"Attempting alternative PDF extraction for {file_path.name}")
+            try:
+                return self._extract_pdf_alternative(file_path)
+            except Exception as alt_error:
+                logger.error(f"Alternative PDF extraction also failed: {alt_error}")
+                raise RuntimeError(f"PDF extraction failed: {e}")
+    
+    def _extract_pdf_alternative(self, file_path: Path) -> str:
+        """
+        Alternative PDF extraction method using different approach
+        
+        Args:
+            file_path: Path to PDF file
+            
+        Returns:
+            str: Extracted text
+        """
+        try:
+            # Method 1: Try opening with different parameters
+            pdf_document = fitz.open(file_path, filetype="pdf")
+            text_content = []
+            
+            try:
+                # Get page count differently
+                page_count = pdf_document.page_count
+                
+                for page_num in range(page_count):
+                    try:
+                        page = pdf_document[page_num]
+                        # Try different text extraction methods
+                        text = page.get_text("text")
+                        if not text.strip():
+                            # Try with different parameters
+                            text = page.get_text("dict")
+                            # Extract text from dict format
+                            text = " ".join([block.get("text", "") for block in text.get("blocks", [])])
+                        
+                        if text.strip():
+                            text_content.append(text)
+                    except Exception as page_error:
+                        logger.warning(f"Alternative extraction failed for page {page_num + 1}: {page_error}")
+                        continue
+                        
+            finally:
+                pdf_document.close()
+            
+            full_text = "\n\n".join(text_content)
+            
+            if not full_text.strip():
+                raise RuntimeError("No text content found with alternative method")
+            
+            logger.info(f"Alternative extraction successful: {len(full_text)} characters")
             return full_text
             
         except Exception as e:
-            logger.error(f"Error extracting from PDF: {e}")
-            raise RuntimeError(f"PDF extraction failed: {e}")
+            raise RuntimeError(f"Alternative PDF extraction failed: {e}")
     
     def extract_text_from_docx(self, file_path: Path) -> str:
         """

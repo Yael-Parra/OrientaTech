@@ -128,9 +128,13 @@ async def semantic_search(
     - ❌ Admins can search any user's documents (future feature)
     
     ### Use cases:
-    - User searching their own uploaded CVs
+    - User searching their own uploaded documents
     - Finding specific information in personal documents
     - Checking what documents match a job description
+    
+    ### Document types:
+    - Leave `document_type` empty to search ALL document types
+    - Specify `document_type` to filter by specific type (cv, cover_letter, etc.)
     """,
     response_description="List of matching user documents"
 )
@@ -193,34 +197,44 @@ async def search_user_documents(
     description="""
     **Find documents similar to a specific document.**
     
+    🔐 **Authentication required** - Only searches within YOUR documents.
+    
     Given a document ID, this endpoint finds other documents with similar content
     using vector similarity search.
     
+    ### Security:
+    - ✅ JWT authentication required
+    - ✅ Only searches YOUR documents
+    - ✅ Document must belong to YOU
+    
     ### Use cases:
-    - Find CVs similar to a reference CV
-    - Discover related certificates
+    - Find your CVs similar to a reference CV
+    - Discover related certificates in your documents
     - Group similar documents
     
     ### How it works:
-    1. Retrieves the embedding of the reference document
-    2. Searches for documents with similar embeddings
-    3. Excludes the reference document itself
-    4. Returns top N most similar documents
+    1. Verifies document belongs to you
+    2. Retrieves the embedding of the reference document
+    3. Searches for similar documents in YOUR collection only
+    4. Excludes the reference document itself
+    5. Returns top N most similar documents
     """,
-    response_description="List of similar documents"
+    response_description="List of similar documents from YOUR collection"
 )
 async def find_similar_documents(
     document_id: str,
+    current_user: Annotated[dict, Depends(get_current_user)],
     limit: Annotated[int, Query(ge=1, le=20, description="Maximum results")] = 5,
     similarity_threshold: Annotated[float, Query(ge=0.0, le=1.0, description="Minimum similarity")] = 0.7
 ):
     """
-    Find documents similar to a specific document
+    Find documents similar to a specific document (only within user's own documents)
     """
     try:
-        # Find similar documents
+        # 🔐 Security: Search only within current user's documents
         results = await search_service.get_similar_documents(
             document_id=document_id,
+            user_id=current_user['id'],  # ← Filter by current user!
             limit=limit,
             similarity_threshold=similarity_threshold
         )
@@ -236,12 +250,14 @@ async def find_similar_documents(
             results=[SearchResultItem(**result) for result in ranked_results],
             search_params={
                 'reference_document_id': document_id,
+                'user_id': current_user['id'],
                 'limit': limit,
                 'similarity_threshold': similarity_threshold
             }
         )
         
     except ValueError as e:
+        # Document not found or doesn't belong to user
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)

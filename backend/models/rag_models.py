@@ -40,7 +40,7 @@ class SearchRequest(BaseModel):
         description="Maximum number of results"
     )
     similarity_threshold: float = Field(
-        default=0.7,
+        default=0.3,
         ge=0.0,
         le=1.0,
         description="Minimum similarity score (0.0 to 1.0)"
@@ -63,7 +63,8 @@ class UserSearchRequest(BaseModel):
     )
     document_type: Optional[DocumentTypeEnum] = Field(
         None,
-        description="Filter by document type"
+        description="Filter by document type (optional - leave empty to search all types)",
+        json_schema_extra={"example": None}
     )
     limit: int = Field(
         default=10,
@@ -72,11 +73,20 @@ class UserSearchRequest(BaseModel):
         description="Maximum number of results"
     )
     similarity_threshold: float = Field(
-        default=0.7,
+        default=0.3,
         ge=0.0,
         le=1.0,
         description="Minimum similarity score"
     )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "query": "Python developer with FastAPI experience",
+                "limit": 10,
+                "similarity_threshold": 0.3
+            }
+        }
 
 
 class RankingWeightsRequest(BaseModel):

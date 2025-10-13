@@ -32,6 +32,12 @@ def create_all_tables():
     cursor = conn.cursor()
 
     try:
+        # ⭐ Create pgvector extension FIRST (required for VECTOR type)
+        cursor.execute("""
+            CREATE EXTENSION IF NOT EXISTS vector;
+        """)
+        logger.info("pgvector extension verified/created")
+        
         # Users table for authentication (compatible with existing structure)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (

@@ -48,7 +48,7 @@ class SearchService:
         user_id: Optional[int] = None,
         document_type: Optional[str] = None,
         limit: int = 10,
-        similarity_threshold: float = 0.7
+        similarity_threshold: float = 0.3
     ) -> List[Dict]:
         """
         Perform semantic search across documents
@@ -100,7 +100,7 @@ class SearchService:
         query: str,
         document_type: Optional[str] = None,
         limit: int = 10,
-        similarity_threshold: float = 0.7
+        similarity_threshold: float = 0.3
     ) -> List[Dict]:
         """
         Search documents of specific user
@@ -132,7 +132,7 @@ class SearchService:
         query: str,
         user_id: Optional[int] = None,
         limit: int = 10,
-        similarity_threshold: float = 0.7
+        similarity_threshold: float = 0.3
     ) -> List[Dict]:
         """
         Search documents by specific type
@@ -168,19 +168,22 @@ class SearchService:
         document_id: str,
         user_id: Optional[int] = None,
         limit: int = 5,
-        similarity_threshold: float = 0.7
+        similarity_threshold: float = 0.3
     ) -> List[Dict]:
         """
         Find documents similar to a specific document
         
         Args:
             document_id: ID of the reference document
-            user_id: Filter by user (None = all users)
+            user_id: Filter by user (if provided, verifies document ownership)
             limit: Maximum number of results
             similarity_threshold: Minimum similarity score
             
         Returns:
             List[Dict]: List of similar documents
+            
+        Raises:
+            ValueError: If document not found or doesn't belong to user
         """
         try:
             # Get the reference document's embedding from database
@@ -189,9 +192,9 @@ class SearchService:
                 raise RuntimeError("Database connection failed")
             
             try:
-                # Get document embedding
+                # Get document embedding and verify ownership
                 query = """
-                    SELECT content_embedding, content_text
+                    SELECT content_embedding, content_text, user_id
                     FROM document_embeddings
                     WHERE document_id = $1 AND is_active = TRUE
                 """
@@ -200,15 +203,30 @@ class SearchService:
                 if not result or not result['content_embedding']:
                     raise ValueError(f"Document {document_id} not found or has no embedding")
                 
-                # Convert pgvector to list
-                reference_embedding = list(result['content_embedding'])
+                # 🔐 Security: Verify document ownership if user_id provided
+                if user_id is not None and result['user_id'] != user_id:
+                    raise ValueError(f"Document {document_id} not found or access denied")
                 
-                # Search using the document's embedding
+                # Use the document owner's user_id for filtering similar documents
+                search_user_id = user_id if user_id is not None else result['user_id']
+                logger.info(f"Searching similar documents for user_id={search_user_id}")
+                
+                # Convert pgvector to list
+                # pgvector returns as string "[0.123,0.456,...]" or as list
+                embedding_data = result['content_embedding']
+                if isinstance(embedding_data, str):
+                    # Parse string format: "[0.123,0.456,...]"
+                    reference_embedding = [float(x) for x in embedding_data.strip('[]').split(',')]
+                else:
+                    # Already a list
+                    reference_embedding = list(embedding_data)
+                
+                # Search using the document's embedding (within same user's documents)
                 search_results = await self._search_in_database(
                     query_embedding=reference_embedding,
                     similarity_threshold=similarity_threshold,
                     max_results=limit + 1,  # +1 to exclude self
-                    target_user_id=user_id,
+                    target_user_id=search_user_id,  # ← Filter by user!
                     document_type_filter=None
                 )
                 
