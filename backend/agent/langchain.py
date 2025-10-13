@@ -103,33 +103,12 @@ class CVAnalyzer:
         Returns:
             Dict containing analyzed CV information
         """
-        analysis_prompt = PromptTemplate(
-            input_variables=["cv_text"],
-            template="""
-            Analyze the following CV text and extract structured information. 
-            Return the information in JSON format with the following fields:
-            
-            - full_name: Full name of the person
-            - education_level: One of [no_formal, primary, secondary, high_school, vocational, bachelors, masters, phd]
-            - previous_experience: Summary of work experience
-            - main_skills: List of technical and soft skills
-            - area_of_interest: Professional interests and career goals
-            - digital_level: One of [basic, intermediate, advanced, expert] based on technical skills
-            - current_sector: Current professional sector
-            - years_experience: Estimated years of professional experience
-            - tech_readiness: Score from 1-10 indicating readiness for tech transition
-            
-            CV Text:
-            {cv_text}
-            
-            Respond only with valid JSON format.
-            """
-        )
-        
+        from agent.prompting import get_cv_analysis_prompt
+        analysis_prompt = get_cv_analysis_prompt()
         try:
             chain = LLMChain(llm=self.llm, prompt=analysis_prompt)
             response = chain.run(cv_text=cv_text)
-            
+
             # Clean and parse JSON response
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
@@ -137,10 +116,10 @@ class CVAnalyzer:
                 analysis_result = json.loads(json_str)
             else:
                 raise ValueError("No valid JSON found in response")
-            
+
             logger.info("CV analysis completed successfully")
             return analysis_result
-            
+
         except Exception as e:
             logger.error(f"Error analyzing CV content: {e}")
             # Return default structure if analysis fails
@@ -166,42 +145,15 @@ class CVAnalyzer:
         Returns:
             str: Personalized career advice in Spanish
         """
-        advice_prompt = PromptTemplate(
-            input_variables=["analysis"],
-            template="""
-            Eres un experto consultor de carrera especializado en transiciones profesionales hacia el sector tecnológico.
-            
-            Basándote en el siguiente análisis de CV, proporciona consejos personalizados y específicos para ayudar a esta persona a hacer una transición exitosa al sector tech:
-            
-            Información del candidato:
-            - Nombre: {full_name}
-            - Sector actual: {current_sector}
-            - Años de experiencia: {years_experience}
-            - Nivel educativo: {education_level}
-            - Habilidades actuales: {main_skills}
-            - Experiencia previa: {previous_experience}
-            - Nivel digital: {digital_level}
-            - Preparación para tech: {tech_readiness}/10
-            
-            Proporciona un consejo estructurado que incluya:
-            1. Evaluación de su perfil actual
-            2. Roles tecnológicos más adecuados para su perfil
-            3. Habilidades específicas que debe desarrollar
-            4. Recursos de aprendizaje recomendados
-            5. Pasos concretos para la transición
-            6. Plataformas de empleo tech más relevantes
-            
-            Responde en español de manera motivadora y práctica, con consejos específicos y accionables.
-            """
-        )
-        
+        from agent.prompting import get_career_advice_prompt
+        advice_prompt = get_career_advice_prompt()
         try:
             chain = LLMChain(llm=self.llm, prompt=advice_prompt)
             advice = chain.run(analysis=analysis_result)
-            
+
             logger.info("Career advice generated successfully")
             return advice
-            
+
         except Exception as e:
             logger.error(f"Error generating career advice: {e}")
             return "Lo siento, no pude generar consejos personalizados en este momento. Te recomiendo explorar cursos de programación básica y plataformas como LinkedIn Learning para comenzar tu transición al sector tecnológico."
