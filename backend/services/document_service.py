@@ -17,12 +17,14 @@ from models.documents import (
 )
 from services.document_utils import DocumentUtils
 from services.cv_anonymizer import anonymize_cv
+from services.RAG import get_rag_integration_service
 
 class DocumentService:
     """Servicio principal para gestión de documentos de usuario"""
     
     def __init__(self):
         self.document_utils = DocumentUtils()
+        self.rag_integration = get_rag_integration_service()
     
     async def upload_document(
         self, 
@@ -111,6 +113,31 @@ class DocumentService:
             DocumentUtils.add_document_to_metadata(user_id, doc_info)
             
             logger.info(f"Document uploaded successfully for user {user_id}: {unique_filename}")
+            
+            # 🔥 INTEGRACIÓN CON RAG: Procesar documento para búsqueda semántica
+            try:
+                logger.info(f"🤖 Iniciando procesamiento RAG del documento {unique_filename}")
+                rag_result = await self.rag_integration.process_uploaded_document(
+                    user_id=user_id,
+                    document_id=doc_id,
+                    file_path=file_path,
+                    filename=unique_filename,
+                    original_filename=file.filename,
+                    document_type=document_type.value,
+                    description=description,
+                    file_size=file_size,
+                    mime_type=doc_info["mime_type"]
+                )
+                
+                if rag_result["success"]:
+                    logger.info(f"✅ Procesamiento RAG completado: {rag_result.get('message')}")
+                else:
+                    logger.warning(f"⚠️ Procesamiento RAG falló: {rag_result.get('error')}")
+                    # No interrumpimos la carga si el procesamiento RAG falla
+                    
+            except Exception as e:
+                logger.error(f"❌ Error en procesamiento RAG (no crítico): {str(e)}")
+                # Continuamos incluso si el procesamiento RAG falla
             
             return DocumentUploadResponse(
                 success=True,
@@ -273,6 +300,22 @@ class DocumentService:
             if file_path.exists():
                 file_path.unlink()
                 logger.info(f"Physical file deleted: {file_path}")
+            
+            # 🔥 INTEGRACIÓN CON RAG: Eliminar embedding de la base de datos
+            try:
+                logger.info(f"🤖 Eliminando embedding RAG del documento {document_id}")
+                rag_delete_result = await self.rag_integration.delete_document_embedding(
+                    user_id=user_id,
+                    document_id=document_id
+                )
+                
+                if rag_delete_result["success"]:
+                    logger.info(f"✅ Embedding RAG eliminado")
+                else:
+                    logger.warning(f"⚠️ No se pudo eliminar el embedding RAG: {rag_delete_result.get('error')}")
+                    
+            except Exception as e:
+                logger.error(f"❌ Error al eliminar embedding RAG (no crítico): {str(e)}")
             
             # Eliminar del metadata
             if DocumentUtils.remove_document_from_metadata(user_id, document_id):

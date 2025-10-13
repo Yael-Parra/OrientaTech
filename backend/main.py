@@ -9,37 +9,100 @@ from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
 from loguru import logger
+from contextlib import asynccontextmanager
 
-# Import routes
-from routes.system_routes import router as system_router
-from routes.auth_simple import router as auth_router
-from routes.user_profile_routes import router as user_profile_router
-from routes.documents_routes import router as documents_router
-from routes.employment_platforms_routes import router as employment_platforms_router
-from routes.reviews_routes import router as reviews_router
-from routes.github_routes import router as github_router
-from routes.cv_analysis_routes import router as cv_analysis_router  # New CV analysis routes
+from routes.auth_simple import auth_router
+from routes.github_routes import github_router
+from routes.documents_routes import documents_router
+from routes.user_profile_routes import profile_router
+from routes.system_routes import system_router
+from routes.reviews_routes import reviews_router
+from routes.employment_platforms_routes import platforms_router
+from routes.rag_routes import rag_router
+from services.setup_service import setup_service
+from pathlib import Path
 
-# Load environment variables
-load_dotenv()
+# Cargar variables de entorno desde backend/.env
+load_dotenv(dotenv_path=Path(__file__).parent / '.env')
 
-# Initialize FastAPI app
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Configuración automática al iniciar la aplicación"""
+    # Startup - Configuración automática
+    logger.info("🚀 Iniciando OrientaTech API...")
+    
+    # Verificar si se necesita configuración
+    if setup_service.is_setup_required():
+        logger.info("⚙️ Ejecutando configuración automática...")
+        try:
+            results = setup_service.run_full_setup()
+            if all(results.values()):
+                logger.success("✅ Configuración completada")
+            else:
+                logger.warning("⚠️ Configuración parcial - algunos servicios pueden fallar")
+        except Exception as e:
+            logger.error(f"❌ Error en configuración: {e}")
+            logger.warning("⚠️ Continuando sin configuración completa")
+    else:
+        logger.info("✅ Sistema ya configurado")
+    
+    yield
+    
+    # Shutdown
+    logger.info("🔄 Cerrando aplicación")
+
+# Configuración CORS
+try:
+    CORS_ORIGINS = eval(os.getenv("CORS_ORIGINS", '["*"]'))
+except:
+    CORS_ORIGINS = ["*"]
+
+
+# Crear aplicación FastAPI con configuración automática
 app = FastAPI(
     title="OrientaTech API",
     description="API para sistema de orientación profesional hacia el sector tecnológico con análisis de CV y IA",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "🏥 Sistema",
+            "description": "Endpoints de sistema, salud, información y monitoreo de la API.",
+        },
+        {
+            "name": "🔐 Autenticación",
+            "description": "Operaciones de autenticación y gestión de usuarios. Incluye registro, login, gestión de tokens y perfiles de usuario.",
+        },
+        {
+            "name": "👤 Perfil de Usuario",
+            "description": "Gestión completa del perfil personal del usuario. CRUD de información personal, educación, experiencia y habilidades con autenticación JWT.",
+        },
+        {
+            "name": "📄 Documentos",
+            "description": "Gestión de documentos de usuario. Subida, descarga, listado y eliminación de CVs, cartas de presentación y certificados con almacenamiento seguro.",
+        },
+        {
+            "name": "🐙 GitHub Integration",
+            "description": "Integración con GitHub API para obtener información del equipo y contribuidores del proyecto en tiempo real.",
+        },
+        {
+            "name": "⭐ Reviews (Reseñas)",
+            "description": "Sistema completo de reseñas de plataformas de empleo. CRUD con autenticación JWT, estadísticas y relaciones con plataformas laborales.",
+        },
+        {
+            "name": "💼 Employment Platforms",
+            "description": "Gestión de plataformas de empleo. Consulta, creación y estadísticas de plataformas laborales con filtros avanzados.",
+        },
+        {
+            "name": "🔍 RAG Search",
+            "description": "Sistema de búsqueda semántica con IA. Búsqueda inteligente de documentos usando embeddings vectoriales y similitud semántica.",
+        }
+    ]
 )
 
-# CORS configuration
-cors_origins = os.getenv("CORS_ORIGINS", '["*"]')
-try:
-    import json
-    origins = json.loads(cors_origins)
-except:
-    origins = ["*"]
-
+# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -56,42 +119,7 @@ app.include_router(documents_router)
 app.include_router(employment_platforms_router)
 app.include_router(reviews_router)
 app.include_router(github_router)
-app.include_router(cv_analysis_router)  # Include CV analysis routes
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "OrientaTech API - Sistema de orientación profesional hacia el sector tecnológico",
-        "version": "1.0.0",
-        "features": [
-            "Autenticación de usuarios",
-            "Gestión de perfiles profesionales", 
-            "Análisis de CV con IA",
-            "Recomendaciones personalizadas de carrera",
-            "Plataformas de empleo tecnológico",
-            "Sistema de reseñas",
-            "Integración con GitHub"
-        ],
-        "docs": "/docs"
-    }
-
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """Custom 404 handler"""
-    return JSONResponse(
-        status_code=404,
-        content={"message": "Endpoint no encontrado", "path": str(request.url)}
-    )
-
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """Custom 500 handler"""
-    logger.error(f"Internal server error: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content={"message": "Error interno del servidor"}
-    )
+app.include_router(rag_router)
 
 if __name__ == "__main__":
     import uvicorn

@@ -187,3 +187,5 @@ embeddings_cache/
 
 # Archivos de sistema Windows
 desktop.ini
+
+models_cache/
