@@ -38,7 +38,9 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-
+.python-version
+pyproject.toml
+uv.lock
 # Bases de datos
 *.db
 *.sqlite

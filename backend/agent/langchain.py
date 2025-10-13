@@ -19,11 +19,6 @@ from langchain.schema.output_parser import StrOutputParser
 from dotenv import load_dotenv
 from loguru import logger
 import numpy as np
-
-# Suprimir warnings específicos de transformers
-import warnings
-warnings.filterwarnings("ignore", message=".*clean_up_tokenization_spaces.*", category=FutureWarning)
-
 from sentence_transformers import SentenceTransformer
 
 # Database imports
@@ -34,7 +29,6 @@ from models.user_profile import EducationLevelEnum, DigitalLevelEnum, GenderEnum
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
-
 
 
 class CVAnalyzer:
