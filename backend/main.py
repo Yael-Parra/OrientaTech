@@ -105,7 +105,7 @@ app = FastAPI(
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -114,9 +114,9 @@ app.add_middleware(
 # Include routers
 app.include_router(system_router)
 app.include_router(auth_router)
-app.include_router(user_profile_router)
+app.include_router(profile_router)
 app.include_router(documents_router)
-app.include_router(employment_platforms_router)
+app.include_router(platforms_router)
 app.include_router(reviews_router)
 app.include_router(github_router)
 app.include_router(rag_router)
