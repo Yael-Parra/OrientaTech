@@ -124,7 +124,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
       }
 
       // Use user-specific search endpoint
-      const response = await fetch(`/api/rag/search/user/${userId}`, {
+      const response = await fetch(`/api/rag/search/user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
