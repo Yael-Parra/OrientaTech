@@ -2,30 +2,22 @@
 import os
 import re
 import json
-from typing import Dict, List, Optional, Tuple, Any
-from pathlib import Path
+from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-# LangChain imports
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader, Docx2txtLoader
+# LangChain imports - Solo los necesarios
 from langchain_groq import ChatGroq
-from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from langchain.schema.output_parser import StrOutputParser
 
 # Local imports
 from dotenv import load_dotenv
 from loguru import logger
-import numpy as np
-from sentence_transformers import SentenceTransformer
 
 # Database imports
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_connection import connect, disconnect
-from models.user_profile import EducationLevelEnum, DigitalLevelEnum, GenderEnum
+from models.user_profile import EducationLevelEnum, DigitalLevelEnum
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -34,64 +26,24 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 class CVAnalyzer:
     """
     CV Analyzer using LangChain and Groq for career transition recommendations
+    Refactorizado para mantener solo métodos utilizados
     """
     
     def __init__(self):
-        """Initialize the CV Analyzer with necessary models and connections"""
+        """Initialize the CV Analyzer with LLM connection only"""
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         if not self.groq_api_key:
             raise ValueError("GROQ_API_KEY not found in environment variables")
         
-        # Initialize Groq LLM
+        # Initialize Groq LLM - Updated to use current model
         self.llm = ChatGroq(
             groq_api_key=self.groq_api_key,
-            model_name="mixtral-8x7b-32768",
+            model_name="llama-3.1-8b-instant",  # Modelo actualizado y compatible
             temperature=0.3,
             max_tokens=2000
         )
         
-        # Initialize embedding model for resume vectorization
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
-        # Text splitter for document processing
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len
-        )
-        
         logger.info("CV Analyzer initialized successfully")
-
-    def extract_text_from_cv(self, file_path: str) -> str:
-        """
-        Extract text from CV file (PDF or DOCX)
-        
-        Args:
-            file_path: Path to the CV file
-            
-        Returns:
-            str: Extracted text content
-        """
-        try:
-            file_extension = Path(file_path).suffix.lower()
-            
-            if file_extension == '.pdf':
-                loader = PyPDFLoader(file_path)
-                documents = loader.load()
-                text = "\n".join([doc.page_content for doc in documents])
-            elif file_extension in ['.docx', '.doc']:
-                loader = Docx2txtLoader(file_path)
-                documents = loader.load()
-                text = "\n".join([doc.page_content for doc in documents])
-            else:
-                raise ValueError(f"Unsupported file format: {file_extension}")
-            
-            logger.info(f"Successfully extracted text from {file_path}")
-            return text
-            
-        except Exception as e:
-            logger.error(f"Error extracting text from CV: {e}")
-            raise
 
     def analyze_cv_content(self, cv_text: str) -> Dict[str, Any]:
         """
@@ -158,28 +110,8 @@ class CVAnalyzer:
             logger.error(f"Error generating career advice: {e}")
             return "Lo siento, no pude generar consejos personalizados en este momento. Te recomiendo explorar cursos de programación básica y plataformas como LinkedIn Learning para comenzar tu transición al sector tecnológico."
 
-    def create_resume_embedding(self, cv_text: str) -> List[float]:
-        """
-        Create vector embedding for the resume text
-        
-        Args:
-            cv_text: Raw text from CV
-            
-        Returns:
-            List[float]: Vector embedding
-        """
-        try:
-            # Create embedding using sentence transformer
-            embedding = self.embedding_model.encode(cv_text)
-            return embedding.tolist()
-            
-        except Exception as e:
-            logger.error(f"Error creating resume embedding: {e}")
-            # Return zero vector if embedding fails
-            return [0.0] * 384  # Default dimension for all-MiniLM-L6-v2
-
     def save_user_profile_to_db(self, user_id: int, analysis_result: Dict[str, Any], 
-                               resume_path: str, resume_embedding: List[float]) -> bool:
+                               resume_path: str) -> bool:
         """
         Save analyzed user profile information to database
         
@@ -187,7 +119,6 @@ class CVAnalyzer:
             user_id: User ID
             analysis_result: Analyzed CV information
             resume_path: Path to the resume file
-            resume_embedding: Vector embedding of the resume
             
         Returns:
             bool: Success status
@@ -242,7 +173,7 @@ class CVAnalyzer:
                     UPDATE user_personal_info 
                     SET full_name = %s, education_level = %s, previous_experience = %s,
                         main_skills = %s, area_of_interest = %s, digital_level = %s,
-                        resume_path = %s, resume_embedding = %s, updated_at = CURRENT_TIMESTAMP
+                        resume_path = %s, updated_at = CURRENT_TIMESTAMP
                     WHERE user_id = %s
                 """, (
                     analysis_result.get('full_name'),
@@ -252,7 +183,6 @@ class CVAnalyzer:
                     analysis_result.get('area_of_interest'),
                     digital_level.value,
                     resume_path,
-                    resume_embedding,
                     user_id
                 ))
                 logger.info(f"Updated user profile for user_id: {user_id}")
@@ -261,8 +191,8 @@ class CVAnalyzer:
                 cursor.execute("""
                     INSERT INTO user_personal_info 
                     (user_id, full_name, education_level, previous_experience, 
-                     main_skills, area_of_interest, digital_level, resume_path, resume_embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     main_skills, area_of_interest, digital_level, resume_path)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     user_id,
                     analysis_result.get('full_name'),
@@ -271,8 +201,7 @@ class CVAnalyzer:
                     analysis_result.get('main_skills'),
                     analysis_result.get('area_of_interest'),
                     digital_level.value,
-                    resume_path,
-                    resume_embedding
+                    resume_path
                 ))
                 logger.info(f"Created new user profile for user_id: {user_id}")
             
@@ -287,13 +216,14 @@ class CVAnalyzer:
             cursor.close()
             disconnect(conn)
 
-    def process_cv_and_generate_advice(self, user_id: int, cv_file_path: str) -> Dict[str, Any]:
+    def process_cv_and_generate_advice(self, user_id: int, cv_text: str) -> Dict[str, Any]:
         """
-        Complete pipeline: process CV and generate career advice
+        Complete pipeline: process CV text and generate career advice
+        Simplificado para trabajar con texto ya extraído
         
         Args:
             user_id: User ID
-            cv_file_path: Path to the CV file
+            cv_text: Text content of the CV (already extracted)
             
         Returns:
             Dict containing analysis results and advice
@@ -301,21 +231,15 @@ class CVAnalyzer:
         try:
             logger.info(f"Starting CV processing for user_id: {user_id}")
             
-            # Step 1: Extract text from CV
-            cv_text = self.extract_text_from_cv(cv_file_path)
-            
-            # Step 2: Analyze CV content
+            # Step 1: Analyze CV content
             analysis_result = self.analyze_cv_content(cv_text)
             
-            # Step 3: Create resume embedding
-            resume_embedding = self.create_resume_embedding(cv_text)
-            
-            # Step 4: Save to database
+            # Step 2: Save to database (without embedding)
             db_success = self.save_user_profile_to_db(
-                user_id, analysis_result, cv_file_path, resume_embedding
+                user_id, analysis_result, "processed_cv.txt"
             )
             
-            # Step 5: Generate career advice
+            # Step 3: Generate career advice
             career_advice = self.generate_career_advice(analysis_result)
             
             result = {
@@ -340,20 +264,21 @@ class CVAnalyzer:
             }
 
 
-# Convenience functions for external use
-def analyze_user_cv(user_id: int, cv_file_path: str) -> Dict[str, Any]:
+# Convenience functions for external use - Simplificadas
+def analyze_user_cv(user_id: int, cv_text: str) -> Dict[str, Any]:
     """
-    Analyze a user's CV and provide career transition advice
+    Analyze a user's CV text and provide career transition advice
+    Simplificado para trabajar con texto en lugar de archivo
     
     Args:
         user_id: User ID
-        cv_file_path: Path to the CV file
+        cv_text: CV text content
         
     Returns:
         Dict containing analysis and advice
     """
     analyzer = CVAnalyzer()
-    return analyzer.process_cv_and_generate_advice(user_id, cv_file_path)
+    return analyzer.process_cv_and_generate_advice(user_id, cv_text)
 
 
 def get_career_advice_for_profile(user_id: int) -> Optional[str]:
@@ -408,9 +333,11 @@ def get_career_advice_for_profile(user_id: int) -> Optional[str]:
 
 
 if __name__ == "__main__":
-    # Test the analyzer
+    # Test simple del analyzer refactorizado
     try:
         analyzer = CVAnalyzer()
-        logger.info("CV Analyzer test completed successfully")
+        logger.info("✅ CV Analyzer refactorizado inicializado correctamente")
+        logger.info(f"🤖 Modelo LLM: llama-3.1-8b-instant")
+        logger.info("🧹 Código refactorizado - Solo métodos utilizados")
     except Exception as e:
-        logger.error(f"CV Analyzer test failed: {e}")
+        logger.error(f"❌ Error en CV Analyzer refactorizado: {e}")

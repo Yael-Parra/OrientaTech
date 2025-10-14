@@ -13,12 +13,16 @@ from models.rag_models import (
     SearchResultItem,
     DocumentStatisticsResponse,
     RAGServiceInfoResponse,
-    ErrorResponse
+    ErrorResponse,
+    EnhancedSearchResponse,  # ← NUEVO
+    LLMContextAnalysis,      # ← NUEVO
+    LLMCareerAdvice         # ← NUEVO
 )
 from services.RAG import (
     get_search_service,
     get_ranking_service
 )
+from services.rag_llm_integration_service import get_rag_llm_integration_service  # ← NUEVO
 from routes.auth_simple import get_current_user
 
 
@@ -36,19 +40,23 @@ rag_router = APIRouter(
 # Service instances
 search_service = get_search_service()
 ranking_service = get_ranking_service()
-
-
+integration_service = get_rag_llm_integration_service()  # ← NUEVO
 
 
 @rag_router.post(
     "/search/user/{user_id}",
-    response_model=SearchResponse,
-    summary="👤 Search User Documents",
+    response_model=EnhancedSearchResponse,  # ← CAMBIADO: Ahora devuelve respuesta enriquecida
+    summary="👤 Search User Documents (Enhanced with LLM)",
     description="""
-    **Search within a specific user's documents.**
+    **Search within a specific user's documents with optional LLM analysis.**
     
     This endpoint allows searching only within documents uploaded by a specific user.
     Requires authentication and users can only search their own documents.
+    
+    ### NEW: Optional LLM Analysis
+    - 🧠 Set `include_llm_analysis=true` to get contextual insights
+    - 🚀 LLM analyzes ALL found documents and provides career advice
+    - ⚡ Adds 2-5 seconds processing time but provides valuable insights
     
     ### Security:
     - 🔐 JWT authentication required
@@ -58,21 +66,23 @@ ranking_service = get_ranking_service()
     ### Use cases:
     - User searching their own uploaded documents
     - Finding specific information in personal documents
+    - Getting career insights based on document collection
     - Checking what documents match a job description
     
     ### Document types:
     - Leave `document_type` empty to search ALL document types
     - Specify `document_type` to filter by specific type (cv, cover_letter, etc.)
     """,
-    response_description="List of matching user documents"
+    response_description="List of matching user documents with optional LLM analysis"
 )
 async def search_user_documents(
     user_id: int,
     request: UserSearchRequest,
-    current_user: Annotated[dict, Depends(get_current_user)]
+    current_user: Annotated[dict, Depends(get_current_user)],
+    include_llm_analysis: Annotated[bool, Query(description="Include LLM contextual analysis")] = False  # ← NUEVO
 ):
     """
-    Search documents of specific user
+    Search documents of specific user with optional LLM analysis
     """
     try:
         # Security: Users can only search their own documents
@@ -94,19 +104,62 @@ async def search_user_documents(
         # Apply ranking
         ranked_results = ranking_service.rank_results(results)
         
-        # Convert to response model
-        return SearchResponse(
-            success=True,
-            query=request.query,
-            total_results=len(ranked_results),
-            results=[SearchResultItem(**result) for result in ranked_results],
-            search_params={
+        # Prepare base response
+        base_response = {
+            'success': True,
+            'query': request.query,
+            'total_results': len(ranked_results),
+            'results': [SearchResultItem(**result) for result in ranked_results],
+            'search_params': {
                 'user_id': user_id,
                 'document_type': request.document_type.value if request.document_type else None,
                 'limit': request.limit,
                 'similarity_threshold': request.similarity_threshold
-            }
-        )
+            },
+            'llm_status': 'not_requested'
+        }
+        
+        # ← NUEVA FUNCIONALIDAD: Análisis LLM opcional
+        if include_llm_analysis and ranked_results:
+            try:
+                logger.info(f"Starting LLM analysis for {len(ranked_results)} documents")
+                
+                # Get user profile (opcional)
+                user_profile = None  # TODO: Implementar obtener perfil de usuario si existe
+                
+                # Perform LLM analysis
+                context_analysis, career_advice, processing_time = await integration_service.analyze_search_context(
+                    search_results=ranked_results,
+                    user_query=request.query,
+                    user_profile=user_profile
+                )
+                
+                # Add LLM results to response
+                if context_analysis and career_advice:
+                    base_response.update({
+                        'llm_analysis': context_analysis,
+                        'llm_advice': career_advice,
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'completed'
+                    })
+                    logger.success(f"✅ LLM analysis completed successfully in {processing_time:.2f}s")
+                else:
+                    base_response.update({
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'failed'
+                    })
+                    logger.warning("⚠️ LLM analysis completed but returned no results")
+                    
+            except Exception as llm_error:
+                logger.error(f"❌ LLM analysis failed: {llm_error}")
+                base_response.update({
+                    'llm_status': 'failed',
+                    'llm_error': str(llm_error)
+                })
+                # Continue with base response even if LLM fails
+        
+        # Convert to response model
+        return EnhancedSearchResponse(**base_response)
         
     except HTTPException:
         raise

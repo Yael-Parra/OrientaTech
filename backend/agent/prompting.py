@@ -76,3 +76,78 @@ Análisis del candidato:
 {{analysis}}
 """
     return PromptTemplate(input_variables=["analysis"], template=template)
+
+
+def get_search_context_analysis_prompt() -> PromptTemplate:
+    """
+    Prompt para analizar múltiples documentos encontrados por RAG y extraer insights contextuales.
+    Entrada: query del usuario + lista de documentos encontrados con contenido completo
+    Salida: JSON con análisis contextual
+    """
+    template = f"""
+{COACH_PERSONA_INSTRUCTIONS}
+
+Analiza los siguientes documentos encontrados para la consulta del usuario.
+Extrae insights contextuales y genera un análisis JSON basado en el conjunto de documentos.
+
+Query del usuario: {{user_query}}
+
+Documentos encontrados por búsqueda semántica:
+{{documents_context}}
+
+Genera SOLO JSON válido (sin markdown, sin comentarios) con estos campos:
+- context_summary: resumen breve del contexto encontrado en los documentos
+- skill_patterns: lista de habilidades más frecuentes identificadas
+- experience_level: descripción del nivel de experiencia promedio detectado
+- tech_readiness_avg: promedio de preparación tecnológica estimada (1-10)
+- dominant_sectors: sectores profesionales dominantes en los documentos
+- transition_opportunities: oportunidades de transición tech identificadas
+- matching_quality: calidad del matching query-documentos (1-10)
+- key_strengths: fortalezas principales identificadas en el conjunto
+- improvement_areas: áreas de mejora comunes identificadas
+
+Reglas:
+- Retorna SOLO un objeto JSON válido minificado
+- Analiza el CONJUNTO de documentos, no individuales
+- Enfócate en patrones y tendencias del grupo de documentos
+- Si hay pocos documentos, indica "análisis limitado" en context_summary
+"""
+    return PromptTemplate(input_variables=["user_query", "documents_context"], template=template)
+
+
+def get_contextual_career_advice_prompt() -> PromptTemplate:
+    """
+    Prompt para generar consejos de carrera contextuales basados en búsqueda específica + perfil del usuario.
+    Entrada: análisis contextual + perfil usuario + query original
+    Salida: Consejos en español adaptados al contexto de la búsqueda
+    """
+    template = f"""
+{COACH_PERSONA_INSTRUCTIONS}
+
+Basándote en el análisis contextual de documentos encontrados y el perfil del usuario, 
+genera consejos específicos y personalizados para su consulta de búsqueda.
+
+Consulta original del usuario: {{user_query}}
+Análisis contextual de documentos encontrados: {{context_analysis}}
+Perfil del usuario (si disponible): {{user_profile}}
+
+Estructura la respuesta en español con estas secciones adaptadas al contexto de búsqueda:
+
+1) **Análisis de tu búsqueda**: Qué revelan los documentos encontrados sobre tu consulta
+2) **Comparación con tu perfil**: Cómo se relacionan los resultados con tu situación actual
+3) **Oportunidades identificadas**: Roles y oportunidades específicas basadas en los documentos
+4) **Brechas de habilidades**: Qué necesitas desarrollar según los perfiles encontrados
+5) **Pasos concretos**: Acciones específicas basadas en los ejemplos encontrados
+6) **Recursos recomendados**: Aprendizaje dirigido según los patrones identificados
+7) **Estrategia de aplicación**: Cómo aplicar a roles similares a los encontrados
+8) **Próximos pasos personalizados**: Plan de acción adaptado a tu contexto de búsqueda
+
+Constraints:
+- Responde SIEMPRE en español
+- Sé específico y referencia los patrones encontrados en los documentos
+- Da consejos accionables con ejemplos concretos
+- Mantén un tono motivador pero realista
+- Adapta el consejo al contexto específico de la búsqueda realizada
+- Si el análisis contextual es limitado, indícalo y da consejos generales
+"""
+    return PromptTemplate(input_variables=["user_query", "context_analysis", "user_profile"], template=template)
