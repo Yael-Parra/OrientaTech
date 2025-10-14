@@ -44,14 +44,14 @@ integration_service = get_rag_llm_integration_service()  # ← NUEVO
 
 
 @rag_router.post(
-    "/search/user/{user_id}",
+    "/search/user",
     response_model=EnhancedSearchResponse,  # ← CAMBIADO: Ahora devuelve respuesta enriquecida
-    summary="👤 Search User Documents (Enhanced with LLM)",
+    summary="👤 Search My Documents (Enhanced with LLM)",
     description="""
-    **Search within a specific user's documents with optional LLM analysis.**
+    **Search within your own documents with optional LLM analysis.**
     
-    This endpoint allows searching only within documents uploaded by a specific user.
-    Requires authentication and users can only search their own documents.
+    This endpoint allows searching only within documents uploaded by the authenticated user.
+    No need to specify user ID - automatically uses the logged-in user.
     
     ### NEW: Optional LLM Analysis
     - 🧠 Set `include_llm_analysis=true` to get contextual insights
@@ -60,37 +60,32 @@ integration_service = get_rag_llm_integration_service()  # ← NUEVO
     
     ### Security:
     - 🔐 JWT authentication required
-    - ✅ Users can only search their own documents
-    - ❌ Admins can search any user's documents (future feature)
+    - ✅ Automatically searches only YOUR documents
+    - 🎯 No risk of accessing other users' documents
     
     ### Use cases:
-    - User searching their own uploaded documents
-    - Finding specific information in personal documents
-    - Getting career insights based on document collection
-    - Checking what documents match a job description
+    - Search your own uploaded documents
+    - Find specific information in your personal documents
+    - Get career insights based on your document collection
+    - Check what documents match a job description
     
     ### Document types:
     - Leave `document_type` empty to search ALL document types
     - Specify `document_type` to filter by specific type (cv, cover_letter, etc.)
     """,
-    response_description="List of matching user documents with optional LLM analysis"
+    response_description="List of matching your documents with optional LLM analysis"
 )
-async def search_user_documents(
-    user_id: int,
+async def search_my_documents(
     request: UserSearchRequest,
     current_user: Annotated[dict, Depends(get_current_user)],
-    include_llm_analysis: Annotated[bool, Query(description="Include LLM contextual analysis")] = False  # ← NUEVO
+    include_llm_analysis: Annotated[bool, Query(description="Include LLM contextual analysis")] = False
 ):
     """
-    Search documents of specific user with optional LLM analysis
+    Search your own documents with optional LLM analysis
     """
     try:
-        # Security: Users can only search their own documents
-        if current_user['id'] != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only search your own documents"
-            )
+        # Use current user ID automatically
+        user_id = current_user['id']
         
         # Perform search
         results = await search_service.search_user_documents(
@@ -290,35 +285,28 @@ async def get_statistics():
 
 
 @rag_router.get(
-    "/stats/user/{user_id}",
+    "/stats/user",
     response_model=DocumentStatisticsResponse,
-    summary="👤 User Document Statistics",
+    summary="👤 My Document Statistics",
     description="""
-    **Get statistics about a specific user's documents.**
+    **Get statistics about your own documents.**
     
-    Returns statistics for documents uploaded by a specific user.
-    Requires authentication - users can only view their own statistics.
+    Returns statistics for documents uploaded by the authenticated user.
+    No need to specify user ID - automatically uses the logged-in user.
     """,
-    response_description="User document statistics"
+    response_description="Your document statistics"
 )
-async def get_user_statistics(
-    user_id: int,
+async def get_my_statistics(
     current_user: Annotated[dict, Depends(get_current_user)]
 ):
-    """Get user-specific document statistics"""
+    """Get your own document statistics"""
     try:
-        # Security: Users can only view their own statistics
-        if current_user['id'] != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only view your own statistics"
-            )
+        # Use current user ID automatically
+        user_id = current_user['id']
         
         stats = await search_service.get_search_statistics(user_id=user_id)
         return DocumentStatisticsResponse(**stats)
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"User statistics error: {e}")
         raise HTTPException(

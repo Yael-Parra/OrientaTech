@@ -397,36 +397,36 @@ Contenido:
             # Define section patterns - support both numbered and non-numbered formats
             section_patterns = {
                 'search_analysis': [
-                    r'(?:1\)\s*)?\*\*Análisis de tu búsqueda\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:1\)\s*)?\*\*Análisis de tu búsqueda\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'(?:1\)\s*)?\*\*Análisis de tu búsqueda:\*\*\s*\n\n?(.*?)(?=\n\*\*Comparación)',
+                    r'(?:1\)\s*)?\*\*Análisis de tu búsqueda:\*\*\s*(.*?)(?=\n\*\*Comparación)'
                 ],
                 'profile_comparison': [
-                    r'(?:2\)\s*)?\*\*Comparación con tu perfil\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:2\)\s*)?\*\*Comparación con tu perfil\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'(?:2\)\s*)?\*\*Comparación con tu perfil:\*\*\s*\n\n?(.*?)(?=\n\*\*Oportunidades)',
+                    r'(?:2\)\s*)?\*\*Comparación con tu perfil:\*\*\s*(.*?)(?=\n\*\*Oportunidades)'
                 ],
                 'identified_opportunities': [
-                    r'(?:3\)\s*)?\*\*Oportunidades identificadas\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:3\)\s*)?\*\*Oportunidades identificadas\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'(?:3\)\s*)?\*\*Oportunidades identificadas:\*\*\s*\n\n?(.*?)(?=\n\*\*Brechas)',
+                    r'(?:3\)\s*)?\*\*Oportunidades identificadas:\*\*\s*(.*?)(?=\n\*\*Brechas)'
                 ],
                 'skill_gaps': [
-                    r'(?:4\)\s*)?\*\*Brechas de habilidades\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:4\)\s*)?\*\*Brechas de habilidades\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'(?:4\)\s*)?\*\*Brechas de habilidades:\*\*\s*\n\n?(.*?)(?=\n\*\*Pasos)',
+                    r'(?:4\)\s*)?\*\*Brechas de habilidades:\*\*\s*(.*?)(?=\n\*\*Pasos)'
                 ],
                 'concrete_steps': [
-                    r'(?:5\)\s*)?\*\*Pasos concretos\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:5\)\s*)?\*\*Pasos concretos\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'\*\*Pasos concretos:\*\*\s*\n\n?(.*?)(?=\n\*\*Recursos recomendados:\*\*)',
+                    r'\*\*Pasos concretos:\*\*\s*(.*?)(?=\n\*\*Recursos recomendados:\*\*)'
                 ],
                 'recommended_resources': [
-                    r'(?:6\)\s*)?\*\*Recursos recomendados\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:6\)\s*)?\*\*Recursos recomendados\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'\*\*Recursos recomendados:\*\*\s*\n\n?(.*?)(?=\n\*\*Estrategia de aplicación:\*\*)',
+                    r'\*\*Recursos recomendados:\*\*\s*(.*?)(?=\n\*\*Estrategia de aplicación:\*\*)'
                 ],
                 'application_strategy': [
-                    r'(?:7\)\s*)?\*\*Estrategia de aplicación\*\*:?\s*\n\n?(.*?)(?=\*\*[A-Za-z]|$)',
-                    r'(?:7\)\s*)?\*\*Estrategia de aplicación\*\*:?\s*(.*?)(?=\*\*[A-Za-z]|$)'
+                    r'\*\*Estrategia de aplicación:\*\*\s*\n\n?(.*?)(?=\n\*\*Próximos pasos)',
+                    r'\*\*Estrategia de aplicación:\*\*\s*(.*?)(?=\n\*\*Próximos pasos)'
                 ],
                 'next_steps': [
-                    r'(?:8\)\s*)?\*\*Próximos pasos personalizados\*\*:?\s*\n\n?(.*?)(?:#|$)',
-                    r'(?:8\)\s*)?\*\*Próximos pasos personalizados\*\*:?\s*(.*?)(?:#|$)'
+                    r'(?:8\)\s*)?\*\*Próximos pasos personalizados:\*\*\s*\n\n?(.*?)(?=\n#|Recuerda|$)',
+                    r'(?:8\)\s*)?\*\*Próximos pasos personalizados:\*\*\s*(.*?)(?=\n#|Recuerda|$)'
                 ]
             }
             
@@ -438,7 +438,9 @@ Contenido:
                     if match:
                         content = match.group(1).strip()
                         if content and len(content) > 10:  # Valid content found
-                            sections[key] = content
+                            # Process content to separate multiple recommendation lists
+                            processed_content = self._process_recommendations_content(content, key)
+                            sections[key] = processed_content
                             found = True
                             break
                 
@@ -459,6 +461,103 @@ Contenido:
         except Exception as e:
             logger.error(f"Error parsing advice response: {e}")
             return None
+    
+    def _process_recommendations_content(self, content: str, section_key: str) -> any:
+        """
+        Process recommendation content to separate multiple lists when applicable
+        
+        Args:
+            content: Raw content from a section
+            section_key: Key identifying the section type
+            
+        Returns:
+            Processed content - either string or list of recommendation groups
+        """
+        import re
+        
+        # Fields that should be processed for multiple recommendation lists
+        list_fields = ['concrete_steps', 'recommended_resources', 'application_strategy']
+        
+        if section_key not in list_fields:
+            return content
+        
+        # Look for patterns that indicate multiple recommendation groups
+        # Pattern: Text + numbered/bulleted list + Text + numbered/bulleted list
+        
+        # Split by phrases that commonly separate recommendation groups
+        separation_patterns = [
+            r'Para\s+[\w\s]+,\s+te\s+recomiendo:',  # "Para [topic], te recomiendo:"
+            r'En\s+cuanto\s+a\s+[\w\s]+:',          # "En cuanto a [topic]:"
+            r'Respecto\s+a\s+[\w\s]+:',             # "Respecto a [topic]:"
+            r'Para\s+mejorar\s+[\w\s]+:',           # "Para mejorar [topic]:"
+            r'Para\s+desarrollar\s+[\w\s]+:',       # "Para desarrollar [topic]:"
+            r'Para\s+[\w\s]+\s+te\s+recomiendo:',   # "Para [topic] te recomiendo:"
+        ]
+        
+        # Try to find separation points
+        separation_points = []
+        
+        for pattern in separation_patterns:
+            matches = list(re.finditer(pattern, content, re.IGNORECASE))
+            for match in matches:
+                separation_points.append({
+                    'start': match.start(),
+                    'end': match.end(),
+                    'text': match.group()
+                })
+        
+        # If we found multiple separation points, split into groups
+        if len(separation_points) >= 2:
+            groups = []
+            
+            # Sort separation points by position
+            separation_points.sort(key=lambda x: x['start'])
+            
+            # Extract content between separation points
+            for i, sep_point in enumerate(separation_points):
+                # Find the end point for this group
+                if i + 1 < len(separation_points):
+                    end_pos = separation_points[i + 1]['start']
+                    group_content = content[sep_point['start']:end_pos].strip()
+                else:
+                    # Last group goes to the end
+                    group_content = content[sep_point['start']:].strip()
+                
+                if group_content and len(group_content) > 20:
+                    # Clean up the content
+                    group_content = self._clean_recommendation_group(group_content)
+                    if group_content:
+                        groups.append(group_content)
+            
+            # If we successfully created multiple groups, return them as a list
+            if len(groups) >= 2:
+                return groups
+        
+        # If no clear separation found, return original content
+        return content
+    
+    def _clean_recommendation_group(self, group_content: str) -> str:
+        """
+        Clean and format a recommendation group
+        
+        Args:
+            group_content: Raw group content
+            
+        Returns:
+            Cleaned group content
+        """
+        import re
+        
+        # Remove extra whitespace and normalize line breaks
+        cleaned = re.sub(r'\n\s*\n\s*\n+', '\n\n', group_content.strip())
+        
+        # Ensure proper spacing after numbered items
+        cleaned = re.sub(r'(\d+\.)\s*([A-Z])', r'\1 \2', cleaned)
+        
+        # Ensure proper spacing after bulleted items
+        cleaned = re.sub(r'(\*)\s*([A-Z])', r'\1 \2', cleaned)
+        
+        return cleaned.strip()
     
     def _parse_advice_fallback(self, response_text: str) -> Dict:
         """
