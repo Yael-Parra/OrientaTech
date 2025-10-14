@@ -1,5 +1,11 @@
-from fastapi import FastAPI
+"""
+OrientaTech - Backend API
+Sistema de orientación profesional hacia el sector tecnológico
+"""
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
 from dotenv import load_dotenv
 from loguru import logger
@@ -55,16 +61,9 @@ except:
 
 # Crear aplicación FastAPI con configuración automática
 app = FastAPI(
-    title="🚀 OrientaTech API",
-    description="""
-    **API completa de autenticación y gestión de usuarios para OrientaTech**
-     """,
+    title="OrientaTech API",
+    description="API para sistema de orientación profesional hacia el sector tecnológico con análisis de CV y IA",
     version="1.0.0",
-    lifespan=lifespan,
-    license_info={
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT",
-    },
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
@@ -112,7 +111,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Incluir routers
+# Include routers
 app.include_router(system_router)
 app.include_router(auth_router)
 app.include_router(profile_router)
@@ -124,4 +123,10 @@ app.include_router(rag_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

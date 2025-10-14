@@ -248,3 +248,91 @@ class ErrorResponse(BaseModel):
             }
         }
 
+
+# ===================================
+# ENHANCED MODELS FOR LLM INTEGRATION
+# ===================================
+
+class LLMContextAnalysis(BaseModel):
+    """Análisis contextual generado por LLM basado en documentos encontrados por RAG"""
+    context_summary: str = Field(description="Resumen breve del contexto encontrado")
+    skill_patterns: List[str] = Field(description="Patrones de habilidades identificadas")
+    experience_level: str = Field(description="Nivel de experiencia promedio detectado")
+    tech_readiness_avg: float = Field(ge=1.0, le=10.0, description="Preparación tecnológica promedio (1-10)")
+    dominant_sectors: List[str] = Field(description="Sectores profesionales dominantes")
+    transition_opportunities: List[str] = Field(description="Oportunidades de transición identificadas")
+    matching_quality: float = Field(ge=1.0, le=10.0, description="Calidad del matching query-documentos (1-10)")
+    key_strengths: List[str] = Field(description="Fortalezas principales del conjunto")
+    improvement_areas: List[str] = Field(description="Áreas de mejora comunes")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "context_summary": "Se encontraron 3 CVs de desarrolladores Python con experiencia variada",
+                "skill_patterns": ["Python", "FastAPI", "PostgreSQL", "Docker"],
+                "experience_level": "3-5 años promedio",
+                "tech_readiness_avg": 7.5,
+                "dominant_sectors": ["Desarrollo de software", "Tecnología"],
+                "transition_opportunities": ["Arquitecto de APIs", "Tech Lead"],
+                "matching_quality": 8.5,
+                "key_strengths": ["Experiencia en Python", "Conocimiento de APIs"],
+                "improvement_areas": ["Testing avanzado", "Arquitectura cloud"]
+            }
+        }
+
+
+class LLMCareerAdvice(BaseModel):
+    """Consejos de carrera contextuales generados por LLM"""
+    search_analysis: str = Field(description="Análisis de la búsqueda realizada")
+    profile_comparison: str = Field(description="Comparación con el perfil del usuario")
+    identified_opportunities: str = Field(description="Oportunidades específicas identificadas")
+    skill_gaps: str = Field(description="Brechas de habilidades identificadas")
+    concrete_steps: str = Field(description="Pasos concretos recomendados")
+    recommended_resources: str = Field(description="Recursos de aprendizaje recomendados")
+    application_strategy: str = Field(description="Estrategia de aplicación")
+    next_steps: str = Field(description="Próximos pasos personalizados")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "search_analysis": "Tu búsqueda de 'Python developer' encontró perfiles con experiencia similar...",
+                "profile_comparison": "Comparado con los perfiles encontrados, tu experiencia en...",
+                "identified_opportunities": "Los roles más compatibles identificados son...",
+                "skill_gaps": "Para mejorar tu competitividad necesitas desarrollar...",
+                "concrete_steps": "Te recomiendo seguir estos pasos específicos...",
+                "recommended_resources": "Basado en los perfiles encontrados, estos recursos...",
+                "application_strategy": "Para aplicar a roles similares, enfócate en...",
+                "next_steps": "Tus próximos pasos personalizados son..."
+            }
+        }
+
+
+class EnhancedSearchResponse(BaseModel):
+    """Respuesta de búsqueda enriquecida con análisis LLM contextual"""
+    success: bool = Field(description="Si la búsqueda fue exitosa")
+    query: str = Field(description="Query original de búsqueda")
+    total_results: int = Field(description="Número total de resultados encontrados")
+    results: List[SearchResultItem] = Field(description="Lista de resultados de búsqueda")
+    search_params: Dict = Field(description="Parámetros de búsqueda utilizados")
+    
+    # Análisis LLM opcional
+    llm_analysis: Optional[LLMContextAnalysis] = Field(None, description="Análisis contextual por LLM")
+    llm_advice: Optional[LLMCareerAdvice] = Field(None, description="Consejos de carrera contextuales")
+    llm_processing_time: Optional[float] = Field(None, description="Tiempo de procesamiento LLM en segundos")
+    llm_status: str = Field(default="not_requested", description="Estado del análisis LLM")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "query": "Python developer with FastAPI",
+                "total_results": 5,
+                "results": [],
+                "search_params": {"user_id": 123, "limit": 10},
+                "llm_analysis": {},
+                "llm_advice": {},
+                "llm_processing_time": 3.2,
+                "llm_status": "completed"
+            }
+        }
+
