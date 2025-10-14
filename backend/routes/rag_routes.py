@@ -13,12 +13,16 @@ from models.rag_models import (
     SearchResultItem,
     DocumentStatisticsResponse,
     RAGServiceInfoResponse,
-    ErrorResponse
+    ErrorResponse,
+    EnhancedSearchResponse,  # ← NUEVO
+    LLMContextAnalysis,      # ← NUEVO
+    LLMCareerAdvice         # ← NUEVO
 )
 from services.RAG import (
     get_search_service,
     get_ranking_service
 )
+from services.rag_llm_integration_service import get_rag_llm_integration_service  # ← NUEVO
 from routes.auth_simple import get_current_user
 
 
@@ -36,123 +40,52 @@ rag_router = APIRouter(
 # Service instances
 search_service = get_search_service()
 ranking_service = get_ranking_service()
-
-
-# ===================================
-# SEARCH ENDPOINTS
-# ===================================
-
-@rag_router.post(
-    "/search",
-    response_model=SearchResponse,
-    summary="🔍 Semantic Search",
-    description="""
-    **Perform semantic search across all documents using vector embeddings.**
-    
-    This endpoint uses AI-powered semantic search to find documents based on meaning,
-    not just keywords. It understands context and finds relevant documents even if
-    they don't contain exact words from your query.
-    
-    ### Features:
-    - 🧠 Semantic understanding (meaning-based, not keyword-based)
-    - 🎯 Vector similarity search using pgvector
-    - 📊 Customizable similarity threshold
-    - 🔧 Filter by document type
-    - ⚡ Fast HNSW index for performance
-    
-    ### Example queries:
-    - "Python developer with FastAPI experience"
-    - "Backend engineer with database knowledge"
-    - "React developer with TypeScript skills"
-    
-    ### How it works:
-    1. Your query is converted to a 384-dimensional vector
-    2. Vector similarity search finds matching documents
-    3. Results are ranked by relevance
-    4. Returns top N most similar documents
-    """,
-    response_description="List of matching documents with similarity scores"
-)
-async def semantic_search(
-    request: SearchRequest
-):
-    """
-    Perform semantic search across all documents
-    """
-    try:
-        # Perform search
-        results = await search_service.semantic_search(
-            query=request.query,
-            document_type=request.document_type.value if request.document_type else None,
-            limit=request.limit,
-            similarity_threshold=request.similarity_threshold
-        )
-        
-        # Apply ranking
-        ranked_results = ranking_service.rank_results(results)
-        
-        # Convert to response model
-        return SearchResponse(
-            success=True,
-            query=request.query,
-            total_results=len(ranked_results),
-            results=[SearchResultItem(**result) for result in ranked_results],
-            search_params={
-                'document_type': request.document_type.value if request.document_type else None,
-                'limit': request.limit,
-                'similarity_threshold': request.similarity_threshold
-            }
-        )
-        
-    except Exception as e:
-        logger.error(f"Search error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+integration_service = get_rag_llm_integration_service()  # ← NUEVO
 
 
 @rag_router.post(
-    "/search/user/{user_id}",
-    response_model=SearchResponse,
-    summary="👤 Search User Documents",
+    "/search/user",
+    response_model=EnhancedSearchResponse,  # ← CAMBIADO: Ahora devuelve respuesta enriquecida
+    summary="👤 Search My Documents (Enhanced with LLM)",
     description="""
-    **Search within a specific user's documents.**
+    **Search within your own documents with optional LLM analysis.**
     
-    This endpoint allows searching only within documents uploaded by a specific user.
-    Requires authentication and users can only search their own documents.
+    This endpoint allows searching only within documents uploaded by the authenticated user.
+    No need to specify user ID - automatically uses the logged-in user.
+    
+    ### NEW: Optional LLM Analysis
+    - 🧠 Set `include_llm_analysis=true` to get contextual insights
+    - 🚀 LLM analyzes ALL found documents and provides career advice
+    - ⚡ Adds 2-5 seconds processing time but provides valuable insights
     
     ### Security:
     - 🔐 JWT authentication required
-    - ✅ Users can only search their own documents
-    - ❌ Admins can search any user's documents (future feature)
+    - ✅ Automatically searches only YOUR documents
+    - 🎯 No risk of accessing other users' documents
     
     ### Use cases:
-    - User searching their own uploaded documents
-    - Finding specific information in personal documents
-    - Checking what documents match a job description
+    - Search your own uploaded documents
+    - Find specific information in your personal documents
+    - Get career insights based on your document collection
+    - Check what documents match a job description
     
     ### Document types:
     - Leave `document_type` empty to search ALL document types
     - Specify `document_type` to filter by specific type (cv, cover_letter, etc.)
     """,
-    response_description="List of matching user documents"
+    response_description="List of matching your documents with optional LLM analysis"
 )
-async def search_user_documents(
-    user_id: int,
+async def search_my_documents(
     request: UserSearchRequest,
-    current_user: Annotated[dict, Depends(get_current_user)]
+    current_user: Annotated[dict, Depends(get_current_user)],
+    include_llm_analysis: Annotated[bool, Query(description="Include LLM contextual analysis")] = False
 ):
     """
-    Search documents of specific user
+    Search your own documents with optional LLM analysis
     """
     try:
-        # Security: Users can only search their own documents
-        if current_user['id'] != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only search your own documents"
-            )
+        # Use current user ID automatically
+        user_id = current_user['id']
         
         # Perform search
         results = await search_service.search_user_documents(
@@ -166,19 +99,62 @@ async def search_user_documents(
         # Apply ranking
         ranked_results = ranking_service.rank_results(results)
         
-        # Convert to response model
-        return SearchResponse(
-            success=True,
-            query=request.query,
-            total_results=len(ranked_results),
-            results=[SearchResultItem(**result) for result in ranked_results],
-            search_params={
+        # Prepare base response
+        base_response = {
+            'success': True,
+            'query': request.query,
+            'total_results': len(ranked_results),
+            'results': [SearchResultItem(**result) for result in ranked_results],
+            'search_params': {
                 'user_id': user_id,
                 'document_type': request.document_type.value if request.document_type else None,
                 'limit': request.limit,
                 'similarity_threshold': request.similarity_threshold
-            }
-        )
+            },
+            'llm_status': 'not_requested'
+        }
+        
+        # ← NUEVA FUNCIONALIDAD: Análisis LLM opcional
+        if include_llm_analysis and ranked_results:
+            try:
+                logger.info(f"Starting LLM analysis for {len(ranked_results)} documents")
+                
+                # Get user profile (opcional)
+                user_profile = None  # TODO: Implementar obtener perfil de usuario si existe
+                
+                # Perform LLM analysis
+                context_analysis, career_advice, processing_time = await integration_service.analyze_search_context(
+                    search_results=ranked_results,
+                    user_query=request.query,
+                    user_profile=user_profile
+                )
+                
+                # Add LLM results to response
+                if context_analysis and career_advice:
+                    base_response.update({
+                        'llm_analysis': context_analysis,
+                        'llm_advice': career_advice,
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'completed'
+                    })
+                    logger.success(f"✅ LLM analysis completed successfully in {processing_time:.2f}s")
+                else:
+                    base_response.update({
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'failed'
+                    })
+                    logger.warning("⚠️ LLM analysis completed but returned no results")
+                    
+            except Exception as llm_error:
+                logger.error(f"❌ LLM analysis failed: {llm_error}")
+                base_response.update({
+                    'llm_status': 'failed',
+                    'llm_error': str(llm_error)
+                })
+                # Continue with base response even if LLM fails
+        
+        # Convert to response model
+        return EnhancedSearchResponse(**base_response)
         
     except HTTPException:
         raise
@@ -270,6 +246,129 @@ async def find_similar_documents(
         )
 
 
+@rag_router.post(
+    "/search/user/enhanced",
+    response_model=EnhancedSearchResponse,
+    summary="🚀 Enhanced Search with Employment Platforms",
+    description="""
+    **Advanced search within your documents with employment platforms integration.**
+    
+    This enhanced version includes:
+    - 🔍 Standard semantic search in your documents
+    - 🤖 LLM contextual analysis
+    - 🏢 Relevant employment platforms recommendations
+    - 💼 Platform-specific career advice
+    
+    🔐 **Authentication required** - Only searches within YOUR documents.
+    
+    ### Features:
+    - Analyzes your documents context
+    - Finds relevant employment platforms for your profile
+    - Provides platform-specific recommendations
+    - Generates actionable career advice
+    
+    ### Use cases:
+    - Get personalized job platform recommendations
+    - Find the best platforms for your skills
+    - Receive platform-specific application strategies
+    - Discover new opportunities in your field
+    """,
+    response_description="Enhanced search results with employment platforms integration"
+)
+async def enhanced_search_with_platforms(
+    request: UserSearchRequest,
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    """
+    Enhanced search with employment platforms integration
+    """
+    try:
+        # Use current user ID automatically
+        user_id = current_user['id']
+        
+        # Perform search
+        results = await search_service.search_user_documents(
+            user_id=user_id,
+            query=request.query,
+            document_type=request.document_type.value if request.document_type else None,
+            limit=request.limit,
+            similarity_threshold=request.similarity_threshold
+        )
+        
+        # Apply ranking
+        ranked_results = ranking_service.rank_results(results)
+        
+        # Prepare base response
+        base_response = {
+            'success': True,
+            'query': request.query,
+            'total_results': len(ranked_results),
+            'results': [SearchResultItem(**result) for result in ranked_results],
+            'search_params': {
+                'user_id': user_id,
+                'document_type': request.document_type.value if request.document_type else None,
+                'limit': request.limit,
+                'similarity_threshold': request.similarity_threshold
+            },
+            'llm_status': 'processing'
+        }
+        
+        # Perform enhanced LLM analysis with employment platforms
+        if ranked_results:
+            try:
+                logger.info(f"Starting enhanced LLM analysis with platforms for {len(ranked_results)} documents")
+                
+                # Get user profile (opcional)
+                user_profile = None  # TODO: Implementar obtener perfil de usuario si existe
+                
+                # Perform enhanced LLM analysis with platforms
+                context_analysis, career_advice, processing_time = await integration_service.analyze_search_context_with_platforms(
+                    search_results=ranked_results,
+                    user_query=request.query,
+                    user_profile=user_profile
+                )
+                
+                # Add LLM results to response
+                if context_analysis and career_advice:
+                    base_response.update({
+                        'llm_analysis': context_analysis,
+                        'llm_advice': career_advice,
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'completed',
+                        'enhanced_with_platforms': True
+                    })
+                    logger.success(f"✅ Enhanced LLM analysis with platforms completed in {processing_time:.2f}s")
+                else:
+                    base_response.update({
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'failed',
+                        'enhanced_with_platforms': False
+                    })
+                    logger.warning("⚠️ Enhanced LLM analysis completed but returned no results")
+                    
+            except Exception as llm_error:
+                logger.error(f"❌ Enhanced LLM analysis failed: {llm_error}")
+                base_response.update({
+                    'llm_status': 'failed',
+                    'llm_error': str(llm_error),
+                    'enhanced_with_platforms': False
+                })
+        else:
+            base_response.update({
+                'llm_status': 'no_documents',
+                'enhanced_with_platforms': False
+            })
+        
+        return EnhancedSearchResponse(**base_response)
+        
+    except Exception as e:
+        logger.error(f"Enhanced search error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
 # ===================================
 # STATISTICS ENDPOINTS
 # ===================================
@@ -309,35 +408,28 @@ async def get_statistics():
 
 
 @rag_router.get(
-    "/stats/user/{user_id}",
+    "/stats/user",
     response_model=DocumentStatisticsResponse,
-    summary="👤 User Document Statistics",
+    summary="👤 My Document Statistics",
     description="""
-    **Get statistics about a specific user's documents.**
+    **Get statistics about your own documents.**
     
-    Returns statistics for documents uploaded by a specific user.
-    Requires authentication - users can only view their own statistics.
+    Returns statistics for documents uploaded by the authenticated user.
+    No need to specify user ID - automatically uses the logged-in user.
     """,
-    response_description="User document statistics"
+    response_description="Your document statistics"
 )
-async def get_user_statistics(
-    user_id: int,
+async def get_my_statistics(
     current_user: Annotated[dict, Depends(get_current_user)]
 ):
-    """Get user-specific document statistics"""
+    """Get your own document statistics"""
     try:
-        # Security: Users can only view their own statistics
-        if current_user['id'] != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only view your own statistics"
-            )
+        # Use current user ID automatically
+        user_id = current_user['id']
         
         stats = await search_service.get_search_statistics(user_id=user_id)
         return DocumentStatisticsResponse(**stats)
         
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"User statistics error: {e}")
         raise HTTPException(
