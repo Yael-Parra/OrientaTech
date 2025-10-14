@@ -8,6 +8,13 @@ export default function EditProfile() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
+  // Document management states
+  const [documents, setDocuments] = useState([])
+  const [loadingDocs, setLoadingDocs] = useState(false)
+  const [deletingDoc, setDeletingDoc] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+
   const [formData, setFormData] = useState({
     full_name: '',
     date_of_birth: '',
@@ -20,8 +27,35 @@ export default function EditProfile() {
     digital_level: ''
   })
 
+  // Helper functions para manejar diferentes campos de la API
+  const getDocumentName = (doc) => {
+    if (doc?.original_name && doc.original_name !== 'undefined') return doc.original_name
+    if (doc?.filename && doc.filename !== 'undefined') return doc.filename
+    if (doc?.name && doc.name !== 'undefined') return doc.name
+    return `Documento_${doc?.id || 'sin_id'}`
+  }
+
+  const getDocumentSize = (doc) => {
+    // Según el modelo backend, el campo correcto es 'size'
+    return doc.size || 0
+  }
+
+  const getDocumentDate = (doc) => {
+    // Según el modelo backend, el campo correcto es 'uploaded_at'
+    return doc.uploaded_at || new Date().toISOString()
+  }
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
   useEffect(() => {
     loadProfileData()
+    loadDocuments()
   }, [])
 
   const loadProfileData = async () => {
@@ -62,6 +96,128 @@ export default function EditProfile() {
     }
   }
 
+  const loadDocuments = async () => {
+    try {
+      setLoadingDocs(true)
+      const token = localStorage.getItem('access_token')
+      const response = await fetch('/documents/my-documents', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setDocuments(data.documents || [])
+      } else {
+        console.error('Error loading documents:', response.status)
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error)
+    } finally {
+      setLoadingDocs(false)
+    }
+  }
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setSelectedFile(file)
+    }
+  }
+
+  const handleFileUpload = async () => {
+    if (!selectedFile) return
+
+    try {
+      setUploading(true)
+      const token = localStorage.getItem('access_token')
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('document_type', 'cv') // Default type
+
+      const res = await fetch('/documents/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (res.ok) {
+        setSelectedFile(null)
+        loadDocuments() // Reload documents
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 3000)
+      } else {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Error al subir el documento')
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+      setError('Error de conexión al subir el documento')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDeleteDocument = async (docId, filename) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar "${filename}"?`)) return
+
+    try {
+      setDeletingDoc(docId)
+      const token = localStorage.getItem('access_token')
+      const res = await fetch(`/documents/delete/${docId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (res.ok) {
+        loadDocuments() // Reload documents
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 3000)
+      } else {
+        const errorData = await res.json()
+        setError(errorData.detail || 'Error al eliminar el documento')
+      }
+    } catch (err) {
+      console.error('Delete error:', err)
+      setError('Error de conexión al eliminar el documento')
+    } finally {
+      setDeletingDoc(null)
+    }
+  }
+
+  const handleDownloadDocument = async (docId, filename) => {
+    try {
+      const token = localStorage.getItem('access_token')
+      const res = await fetch(`/documents/download/${docId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (res.ok) {
+        const blob = await res.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+      } else {
+        setError('Error al descargar el documento')
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      setError('Error de conexión al descargar el documento')
+    }
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({
@@ -76,6 +232,17 @@ export default function EditProfile() {
       setSaving(true)
       setError(null)
 
+      // Clean and prepare data - only send fields with values
+      const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+        // Only include fields that have actual values (not empty strings)
+        if (value !== null && value !== undefined && value !== '') {
+          acc[key] = value
+        }
+        return acc
+      }, {})
+      
+      console.log('Sending profile data:', cleanedData)
+      
       const token = localStorage.getItem('access_token')
       const res = await fetch('/profile/', {
         method: 'PATCH',
@@ -83,12 +250,27 @@ export default function EditProfile() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(cleanedData)
       })
 
       if (!res.ok) {
         const data = await res.json()
-        throw new Error(data.detail || 'Error al actualizar el perfil')
+        console.error('Backend error response:', data)
+        
+        // Handle validation errors specifically
+        if (res.status === 422 && data.detail) {
+          if (Array.isArray(data.detail)) {
+            // Multiple validation errors
+            const errorMessages = data.detail.map(error => `${error.loc?.join('.') || 'Campo'}: ${error.msg}`).join(', ')
+            throw new Error(`Errores de validación: ${errorMessages}`)
+          } else if (typeof data.detail === 'string') {
+            throw new Error(data.detail)
+          } else {
+            throw new Error('Error de validación en los datos enviados')
+          }
+        }
+        
+        throw new Error(data.detail || data.message || `Error ${res.status}: ${res.statusText}`)
       }
 
       setSuccess(true)
@@ -96,8 +278,8 @@ export default function EditProfile() {
         navigate('/dashboard')
       }, 2000)
     } catch (err) {
-      console.error(err)
-      setError(err.message)
+      console.error('Form submission error:', err)
+      setError(typeof err === 'string' ? err : err.message || 'Error desconocido al actualizar el perfil')
     } finally {
       setSaving(false)
     }
@@ -290,8 +472,8 @@ export default function EditProfile() {
                     <option value="secondary">Secundaria</option>
                     <option value="high_school">Bachillerato</option>
                     <option value="vocational">Formación Profesional</option>
-                    <option value="bachelor">Grado</option>
-                    <option value="master">Máster</option>
+                    <option value="bachelors">Grado</option>
+                    <option value="masters">Máster</option>
                     <option value="phd">Doctorado</option>
                   </select>
                 </div>
@@ -366,6 +548,140 @@ export default function EditProfile() {
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none transition duration-200"
                   />
                   <p className="text-xs text-gray-500 mt-1">Separa las habilidades con comas</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Documents Management Section */}
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-6 shadow-lg">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Gestión de Documentos
+              </h3>
+              
+              {/* File Upload Section */}
+              <div className="mb-6 p-4 bg-white rounded-lg border border-blue-200">
+                <h4 className="font-semibold text-gray-700 mb-3 flex items-center">
+                  <svg className="w-4 h-4 text-orange-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  Subir Nuevo Documento
+                </h4>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="file"
+                    onChange={handleFileSelect}
+                    accept=".pdf,.doc,.docx"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleFileUpload}
+                    disabled={!selectedFile || uploading}
+                    className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {uploading ? (
+                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      'Subir'
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2">Formatos soportados: PDF, DOC, DOCX</p>
+              </div>
+
+              {/* Documents List */}
+              <div className="bg-white rounded-lg border border-blue-200">
+                <div className="p-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-blue-100">
+                  <h4 className="font-semibold text-gray-800 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Mis Documentos ({documents.length})
+                    </div>
+                    {loadingDocs && (
+                      <svg className="w-4 h-4 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    )}
+                  </h4>
+                </div>
+
+                <div className="p-4">
+                  {loadingDocs ? (
+                    <div className="flex items-center justify-center py-4">
+                      <svg className="w-5 h-5 animate-spin text-orange-500 mr-2" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-gray-600">Cargando documentos...</span>
+                    </div>
+                  ) : documents.length > 0 ? (
+                    <div className="space-y-3">
+                      {documents.map((doc) => (
+                        <div key={doc.id} className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-gray-800">{getDocumentName(doc)}</h4>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                <span>{formatFileSize(getDocumentSize(doc))}</span>
+                                <span>{new Date(getDocumentDate(doc)).toLocaleDateString('es-ES')}</span>
+                                <span className="capitalize">{doc.type || 'Documento'}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleDownloadDocument(doc.id, getDocumentName(doc))}
+                              className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                              title="Descargar"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDocument(doc.id, getDocumentName(doc))}
+                              disabled={deletingDoc === doc.id}
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                              title="Eliminar"
+                            >
+                              {deletingDoc === doc.id ? (
+                                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 py-8">
+                      <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <p>No tienes documentos subidos</p>
+                      <p className="text-sm mt-1">Sube tu primer documento para comenzar</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

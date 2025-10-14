@@ -7,14 +7,12 @@ import EditProfile from './pages/EditProfile'
 function App() {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/registro" element={<Registration />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/perfil/editar" element={<EditProfile />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/registro" element={<Registration />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/edit-profile" element={<EditProfile />} />
+      </Routes>
     </Router>
   )
 }

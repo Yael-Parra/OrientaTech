@@ -20,7 +20,6 @@ const ResourcesTab = ({ userData, profileData }) => {
       setRecommendationsError(null)
       
       const token = localStorage.getItem('access_token')
-      const userId = userData.id
       
       // Query to extract CV content for analysis (not asking for recommendations)
       const recommendationQuery = `Muéstrame mi experiencia laboral, habilidades técnicas, educación, certificaciones, proyectos y competencias profesionales completas`
@@ -31,7 +30,7 @@ const ResourcesTab = ({ userData, profileData }) => {
         similarity_threshold: 0.2
       }
 
-      const response = await fetch(`/api/rag/search/user/${userId}`, {
+      const response = await fetch('/api/rag/search/user?include_llm_analysis=true', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
