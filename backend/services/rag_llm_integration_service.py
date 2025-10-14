@@ -10,8 +10,13 @@ from typing import List, Dict, Optional, Tuple
 from loguru import logger
 
 from agent.langchain import CVAnalyzer
-from agent.prompting import get_search_context_analysis_prompt, get_contextual_career_advice_prompt
+from agent.prompting import (
+    get_search_context_analysis_prompt, 
+    get_contextual_career_advice_prompt,
+    get_enhanced_contextual_advice_prompt
+)
 from models.rag_models import LLMContextAnalysis, LLMCareerAdvice
+from services.employment_platforms_service import get_employment_platforms_service
 
 
 class RAGLLMIntegrationService:
@@ -638,6 +643,178 @@ Contenido:
                 'response_logging'  # Nueva característica
             ]
         }
+
+    async def analyze_search_context_with_platforms(
+        self,
+        search_results: List[Dict],
+        user_query: str,
+        user_profile: Optional[Dict] = None
+    ) -> Tuple[Optional[LLMContextAnalysis], Optional[LLMCareerAdvice], float]:
+        """
+        Enhanced version that includes employment platforms in the analysis
+        
+        Args:
+            search_results: Results from RAG search containing document content
+            user_query: Original search query from user
+            user_profile: Optional user profile information
+            
+        Returns:
+            Tuple of (context_analysis, career_advice, processing_time)
+        """
+        start_time = time.time()
+        
+        try:
+            logger.info(f"🔍 Starting enhanced RAG-LLM integration with platforms for query: '{user_query}'")
+            
+            # Step 1: Analyze search context (same as before)
+            context_analysis = await self._analyze_search_context(search_results, user_query)
+            if not context_analysis:
+                logger.warning("Context analysis failed, cannot proceed with advice generation")
+                return None, None, time.time() - start_time
+            
+            # Step 2: Get relevant employment platforms
+            employment_service = get_employment_platforms_service()
+            
+            # Extract keywords from user query and context for platform search
+            platform_keywords = self._extract_platform_keywords(user_query, context_analysis)
+            
+            # Get relevant platforms
+            relevant_platforms = await employment_service.get_relevant_platforms(
+                query=" ".join(platform_keywords),
+                limit=8
+            )
+            
+            # Format platforms for prompt
+            platforms_context = employment_service.format_platforms_for_prompt(
+                relevant_platforms,
+                include_descriptions=True
+            )
+            
+            logger.info(f"📊 Found {len(relevant_platforms)} relevant employment platforms")
+            
+            # Step 3: Generate enhanced contextual advice with platforms
+            enhanced_advice = await self._generate_enhanced_contextual_advice(
+                user_query=user_query,
+                context_analysis=context_analysis,
+                user_profile=user_profile,
+                employment_platforms=platforms_context
+            )
+            
+            processing_time = time.time() - start_time
+            logger.success(f"✅ Enhanced RAG-LLM integration completed in {processing_time:.2f}s")
+            
+            return context_analysis, enhanced_advice, processing_time
+            
+        except Exception as e:
+            logger.error(f"Error in enhanced search context analysis: {e}")
+            processing_time = time.time() - start_time
+            return None, None, processing_time
+
+    def _extract_platform_keywords(
+        self, 
+        user_query: str, 
+        context_analysis: LLMContextAnalysis
+    ) -> List[str]:
+        """
+        Extract keywords from user query and context analysis for platform search
+        
+        Args:
+            user_query: Original user query
+            context_analysis: Context analysis from documents
+            
+        Returns:
+            List of keywords for platform search
+        """
+        keywords = []
+        
+        # Add words from user query
+        query_words = [word.lower() for word in user_query.split() if len(word) > 3]
+        keywords.extend(query_words)
+        
+        # Add skill patterns from context
+        if context_analysis.skill_patterns:
+            skill_words = []
+            for skill in context_analysis.skill_patterns:
+                skill_words.extend([word.lower() for word in skill.split() if len(word) > 3])
+            keywords.extend(skill_words[:5])  # Limit to top 5 skill keywords
+        
+        # Add dominant sectors
+        if context_analysis.dominant_sectors:
+            sector_words = []
+            for sector in context_analysis.dominant_sectors:
+                sector_words.extend([word.lower() for word in sector.split() if len(word) > 3])
+            keywords.extend(sector_words[:3])  # Limit to top 3 sector keywords
+        
+        # Remove duplicates and return
+        return list(set(keywords))
+
+    async def _generate_enhanced_contextual_advice(
+        self,
+        user_query: str,
+        context_analysis: Optional[LLMContextAnalysis],
+        user_profile: Optional[Dict],
+        employment_platforms: str
+    ) -> Optional[LLMCareerAdvice]:
+        """
+        Generate enhanced contextual career advice using LLM with employment platforms
+        
+        Args:
+            user_query: Original search query
+            context_analysis: Context analysis from previous step
+            user_profile: Optional user profile
+            employment_platforms: Formatted employment platforms information
+            
+        Returns:
+            LLMCareerAdvice or None if failed
+        """
+        try:
+            if not context_analysis:
+                logger.warning("No context analysis available, skipping enhanced advice generation")
+                return None
+            
+            # Get enhanced prompt template
+            prompt_template = get_enhanced_contextual_advice_prompt()
+            prompt = prompt_template.format(
+                user_query=user_query,
+                context_analysis=context_analysis.dict() if context_analysis else {},
+                user_profile=user_profile or "No hay información de perfil disponible",
+                employment_platforms=employment_platforms or "No hay plataformas de empleo disponibles"
+            )
+            
+            # 📄 GUARDAR PROMPT EN ARCHIVO
+            prompt_file = self._save_prompt_to_file(
+                prompt=prompt,
+                prompt_type="enhanced_career_advice",
+                user_query=user_query
+            )
+            logger.info(f"💡 Prompt mejorado de consejos de carrera guardado en archivo")
+            
+            # Call LLM
+            logger.info("Generating enhanced contextual career advice with employment platforms...")
+            response = self.cv_analyzer.llm.invoke(prompt)
+            
+            # 📥 GUARDAR RESPUESTA EN ARCHIVO
+            self._save_llm_response_to_file(
+                response=response.content,
+                prompt_type="enhanced_career_advice",
+                user_query=user_query
+            )
+            
+            # Parse structured response
+            advice_dict = self._parse_advice_response(response.content)
+            if not advice_dict:
+                logger.error("Failed to parse enhanced career advice from LLM response")
+                return None
+            
+            # Create Pydantic model
+            career_advice = LLMCareerAdvice(**advice_dict)
+            logger.success("✅ Enhanced contextual career advice with platforms generated successfully")
+            
+            return career_advice
+            
+        except Exception as e:
+            logger.error(f"Error generating enhanced contextual advice: {e}")
+            return None
 
 
 # ===================================

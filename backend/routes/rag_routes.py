@@ -246,6 +246,129 @@ async def find_similar_documents(
         )
 
 
+@rag_router.post(
+    "/search/user/enhanced",
+    response_model=EnhancedSearchResponse,
+    summary="🚀 Enhanced Search with Employment Platforms",
+    description="""
+    **Advanced search within your documents with employment platforms integration.**
+    
+    This enhanced version includes:
+    - 🔍 Standard semantic search in your documents
+    - 🤖 LLM contextual analysis
+    - 🏢 Relevant employment platforms recommendations
+    - 💼 Platform-specific career advice
+    
+    🔐 **Authentication required** - Only searches within YOUR documents.
+    
+    ### Features:
+    - Analyzes your documents context
+    - Finds relevant employment platforms for your profile
+    - Provides platform-specific recommendations
+    - Generates actionable career advice
+    
+    ### Use cases:
+    - Get personalized job platform recommendations
+    - Find the best platforms for your skills
+    - Receive platform-specific application strategies
+    - Discover new opportunities in your field
+    """,
+    response_description="Enhanced search results with employment platforms integration"
+)
+async def enhanced_search_with_platforms(
+    request: UserSearchRequest,
+    current_user: Annotated[dict, Depends(get_current_user)]
+):
+    """
+    Enhanced search with employment platforms integration
+    """
+    try:
+        # Use current user ID automatically
+        user_id = current_user['id']
+        
+        # Perform search
+        results = await search_service.search_user_documents(
+            user_id=user_id,
+            query=request.query,
+            document_type=request.document_type.value if request.document_type else None,
+            limit=request.limit,
+            similarity_threshold=request.similarity_threshold
+        )
+        
+        # Apply ranking
+        ranked_results = ranking_service.rank_results(results)
+        
+        # Prepare base response
+        base_response = {
+            'success': True,
+            'query': request.query,
+            'total_results': len(ranked_results),
+            'results': [SearchResultItem(**result) for result in ranked_results],
+            'search_params': {
+                'user_id': user_id,
+                'document_type': request.document_type.value if request.document_type else None,
+                'limit': request.limit,
+                'similarity_threshold': request.similarity_threshold
+            },
+            'llm_status': 'processing'
+        }
+        
+        # Perform enhanced LLM analysis with employment platforms
+        if ranked_results:
+            try:
+                logger.info(f"Starting enhanced LLM analysis with platforms for {len(ranked_results)} documents")
+                
+                # Get user profile (opcional)
+                user_profile = None  # TODO: Implementar obtener perfil de usuario si existe
+                
+                # Perform enhanced LLM analysis with platforms
+                context_analysis, career_advice, processing_time = await integration_service.analyze_search_context_with_platforms(
+                    search_results=ranked_results,
+                    user_query=request.query,
+                    user_profile=user_profile
+                )
+                
+                # Add LLM results to response
+                if context_analysis and career_advice:
+                    base_response.update({
+                        'llm_analysis': context_analysis,
+                        'llm_advice': career_advice,
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'completed',
+                        'enhanced_with_platforms': True
+                    })
+                    logger.success(f"✅ Enhanced LLM analysis with platforms completed in {processing_time:.2f}s")
+                else:
+                    base_response.update({
+                        'llm_processing_time': processing_time,
+                        'llm_status': 'failed',
+                        'enhanced_with_platforms': False
+                    })
+                    logger.warning("⚠️ Enhanced LLM analysis completed but returned no results")
+                    
+            except Exception as llm_error:
+                logger.error(f"❌ Enhanced LLM analysis failed: {llm_error}")
+                base_response.update({
+                    'llm_status': 'failed',
+                    'llm_error': str(llm_error),
+                    'enhanced_with_platforms': False
+                })
+        else:
+            base_response.update({
+                'llm_status': 'no_documents',
+                'enhanced_with_platforms': False
+            })
+        
+        return EnhancedSearchResponse(**base_response)
+        
+    except Exception as e:
+        logger.error(f"Enhanced search error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
 # ===================================
 # STATISTICS ENDPOINTS
 # ===================================

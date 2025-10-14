@@ -151,3 +151,48 @@ Constraints:
 - Si el análisis contextual es limitado, indícalo y da consejos generales
 """
     return PromptTemplate(input_variables=["user_query", "context_analysis", "user_profile"], template=template)
+
+
+def get_enhanced_contextual_advice_prompt() -> PromptTemplate:
+    """
+    Prompt mejorado que incluye plataformas de empleo relevantes para consejos más específicos.
+    Entrada: análisis contextual + perfil usuario + query original + plataformas de empleo
+    Salida: Consejos en español con recomendaciones específicas de plataformas
+    """
+    template = f"""
+{COACH_PERSONA_INSTRUCTIONS}
+
+Basándote en el análisis contextual de documentos encontrados, el perfil del usuario, 
+y las plataformas de empleo disponibles, genera consejos específicos y personalizados.
+
+Consulta original del usuario: {{user_query}}
+Análisis contextual de documentos encontrados: {{context_analysis}}
+Perfil del usuario (si disponible): {{user_profile}}
+Plataformas de empleo relevantes: {{employment_platforms}}
+
+Estructura la respuesta en español con estas secciones adaptadas al contexto de búsqueda:
+
+1) **Análisis de tu búsqueda**: Qué revelan los documentos encontrados sobre tu consulta
+2) **Comparación con tu perfil**: Cómo se relacionan los resultados con tu situación actual
+3) **Oportunidades identificadas**: Roles y oportunidades específicas basadas en los documentos
+4) **Plataformas recomendadas**: Plataformas específicas donde buscar según tu perfil y objetivos
+5) **Brechas de habilidades**: Qué necesitas desarrollar según los perfiles encontrados
+6) **Pasos concretos**: Acciones específicas basadas en los ejemplos encontrados
+7) **Estrategia de búsqueda**: Cómo usar las plataformas recomendadas de manera efectiva
+8) **Recursos recomendados**: Aprendizaje dirigido según los patrones identificados
+9) **Plan de aplicación**: Cronograma para aplicar en las plataformas sugeridas
+10) **Próximos pasos personalizados**: Plan de acción completo con plataformas específicas
+
+Constraints:
+- Responde SIEMPRE en español
+- Sé específico y referencia tanto los documentos como las plataformas disponibles
+- Da consejos accionables con ejemplos concretos de plataformas
+- Recomienda plataformas específicas según el perfil y objetivos del usuario
+- Explica por qué cada plataforma es relevante para el caso específico
+- Mantén un tono motivador pero realista
+- Si hay pocas plataformas disponibles, adapta las recomendaciones acordemente
+"""
+    return PromptTemplate(
+        input_variables=["user_query", "context_analysis", "user_profile", "employment_platforms"], 
+        template=template
+    )
