@@ -9,14 +9,14 @@ from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from loguru import logger
 
-from agent.langchain import CVAnalyzer
-from agent.prompting import (
+from backend.agent.langchain import CVAnalyzer
+from backend.agent.prompting import (
     get_search_context_analysis_prompt, 
     get_contextual_career_advice_prompt,
     get_enhanced_contextual_advice_prompt
 )
-from models.rag_models import LLMContextAnalysis, LLMCareerAdvice
-from services.employment_platforms_service import get_employment_platforms_service
+from backend.models.rag_models import LLMContextAnalysis, LLMCareerAdvice
+from backend.services.employment_platforms_service import get_employment_platforms_service
 
 
 class RAGLLMIntegrationService:

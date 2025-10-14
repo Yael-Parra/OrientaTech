@@ -1,11 +1,5 @@
 """
 RAG Integration Service - RAG Integration with Document Upload
-
-This service automatically:
-1. Extracts text from uploaded documents
-2. Generates vector representations (embeddings)
-3. Saves them to PostgreSQL database
-4. Updates document metadata
 """
 import hashlib
 from pathlib import Path
@@ -14,9 +8,9 @@ from loguru import logger
 import psycopg2
 from psycopg2.extras import execute_values
 
-from database.db_connection import connect, disconnect
-from services.RAG.embedding_service import get_embedding_service
-from services.RAG.document_processor import get_document_processor
+from backend.database.db_connection import connect, disconnect
+from backend.services.RAG.embedding_service import get_embedding_service
+from backend.services.RAG.document_processor import get_document_processor
 
 
 class RAGIntegrationService:

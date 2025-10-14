@@ -10,7 +10,7 @@ from langchain_groq import ChatGroq
 from langchain.chains import LLMChain
 
 # Local imports
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from loguru import logger
 
 # Database imports
@@ -55,7 +55,7 @@ class CVAnalyzer:
         Returns:
             Dict containing analyzed CV information
         """
-        from agent.prompting import get_cv_analysis_prompt
+        from .prompting import get_cv_analysis_prompt
         analysis_prompt = get_cv_analysis_prompt()
         try:
             chain = LLMChain(llm=self.llm, prompt=analysis_prompt)
@@ -97,7 +97,7 @@ class CVAnalyzer:
         Returns:
             str: Personalized career advice in Spanish
         """
-        from agent.prompting import get_career_advice_prompt
+        from .prompting import get_career_advice_prompt
         advice_prompt = get_career_advice_prompt()
         try:
             chain = LLMChain(llm=self.llm, prompt=advice_prompt)
@@ -332,12 +332,46 @@ def get_career_advice_for_profile(user_id: int) -> Optional[str]:
         disconnect(conn)
 
 
+class Chatbot:
+    """
+    Chatbot conversacional con buffer de memoria persistente.
+    """
+    def __init__(self):
+        # Iniciamos el builder que maneja prompt, memoria y BD
+        from .chat_builder import ChatBuilder
+        self.builder = ChatBuilder()
+        logger.info("🤝 Chatbot inicializado con memoria conversacional persistente")
+
+    def chat(self, user_id: int, user_input: str) -> str:
+        """
+        Ejecuta el flujo conversacional para un usuario.
+        - user_id: debe venir de la capa que sabe si el usuario está logeado (e.g., rutas con auth).
+        - user_input: texto del usuario desde el front (chatbot).
+        """
+        try:
+            logger.info(f"💬 Iniciando mensaje de usuario_id={user_id}")
+            response = self.builder.send_user_message(user_id, user_input)
+            logger.info(f"✅ Respuesta generada para usuario_id={user_id}")
+            return response
+        except Exception as e:
+            logger.error(f"❌ Error en chat conversacional: {e}")
+            return (
+                "Lo siento, tuve un problema generando la respuesta. "
+                "Por favor, intenta de nuevo en unos minutos."
+            )
+
+
 if __name__ == "__main__":
-    # Test simple del analyzer refactorizado
     try:
         analyzer = CVAnalyzer()
         logger.info("✅ CV Analyzer refactorizado inicializado correctamente")
-        logger.info(f"🤖 Modelo LLM: llama-3.1-8b-instant")
         logger.info("🧹 Código refactorizado - Solo métodos utilizados")
+
+        # Inicializar también el Chatbot para verificar su configuración
+        chatbot = Chatbot()
+        logger.info("✅ Chatbot listo para conversaciones con memoria persistente")
+        # Nota: No se ejecuta una conversación aquí para evitar dependencias del front.
+        # Puedes probar desde rutas del backend llamando a Chatbot.chat(user_id, input_text)
+
     except Exception as e:
-        logger.error(f"❌ Error en CV Analyzer refactorizado: {e}")
+        logger.error(f"❌ Error al inicializar componentes: {e}")

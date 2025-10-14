@@ -7,23 +7,26 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from loguru import logger
 from contextlib import asynccontextmanager
 
-from routes.auth_simple import auth_router
-from routes.github_routes import github_router
-from routes.documents_routes import documents_router
-from routes.user_profile_routes import profile_router
-from routes.system_routes import system_router
-from routes.reviews_routes import reviews_router
-from routes.employment_platforms_routes import platforms_router
-from routes.rag_routes import rag_router
+# Cargar variables de entorno ANTES de importar routers (prefiere .env de la raíz)
+load_dotenv(find_dotenv())
+
+# Importa routers usando el paquete 'backend'
+from backend.routes.auth_simple import auth_router
+from backend.routes.chatbot_route import router as chatbot_router
+from backend.routes.cv_analysis_routes import router as cv_analysis_router
+from backend.routes.documents_routes import router as documents_router
+from backend.routes.employment_platforms_routes import router as employment_platforms_router
+from backend.routes.github_routes import router as github_router
+from backend.routes.rag_routes import router as rag_router
+from backend.routes.reviews_routes import router as reviews_router
+from backend.routes.system_routes import router as system_router
+from backend.routes.user_profile_routes import router as user_profile_router
 from services.setup_service import setup_service
 from pathlib import Path
-
-# Cargar variables de entorno desde backend/.env
-load_dotenv(dotenv_path=Path(__file__).parent / '.env')
 
 
 @asynccontextmanager
@@ -114,12 +117,15 @@ app.add_middleware(
 # Include routers
 app.include_router(system_router)
 app.include_router(auth_router)
-app.include_router(profile_router)
 app.include_router(documents_router)
-app.include_router(platforms_router)
-app.include_router(reviews_router)
+app.include_router(employment_platforms_router)
 app.include_router(github_router)
 app.include_router(rag_router)
+app.include_router(reviews_router)
+app.include_router(system_router)
+app.include_router(user_profile_router)
+app.include_router(cv_analysis_router)
+app.include_router(chatbot_router)
 
 if __name__ == "__main__":
     import uvicorn

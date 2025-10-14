@@ -8,7 +8,7 @@ import asyncpg
 from datetime import datetime
 
 # Imports de modelos
-from models.user_profile import (
+from backend.models.user_profile import (
     UserPersonalInfoCreate, 
     UserPersonalInfoUpdate, 
     UserPersonalInfoResponse,
@@ -16,10 +16,10 @@ from models.user_profile import (
 )
 
 # Imports de autenticación
-from routes.auth_simple import get_current_user
+from backend.routes.auth_simple import get_current_user
 
 # Import de base de datos
-from database.db_connection import connect_async, disconnect_async
+from backend.database.db_connection import connect_async, disconnect_async
 
 # Router para perfil de usuario
 profile_router = APIRouter(
@@ -32,6 +32,7 @@ profile_router = APIRouter(
         500: {"description": "Error interno del servidor"}
     }
 )
+router = profile_router
 
 # Funciones auxiliares para base de datos
 async def get_profile_by_user_id(user_id: int) -> Optional[dict]:

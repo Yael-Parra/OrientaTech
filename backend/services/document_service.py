@@ -10,14 +10,14 @@ from typing import List, Optional, Dict, Tuple
 from fastapi import UploadFile, HTTPException, status
 from loguru import logger
 
-from models.documents import (
+from backend.models.documents import (
     DocumentInfo, DocumentType, UserDocumentsResponse,
     DocumentUploadResponse, DocumentDeleteResponse,
     DocumentValidator, DocumentErrorResponses
 )
-from services.document_utils import DocumentUtils
-from services.cv_anonymizer import anonymize_cv
-from services.RAG import get_rag_integration_service
+from backend.services.document_utils import DocumentUtils
+from backend.services.cv_anonymizer import anonymize_cv
+from backend.services.RAG import get_rag_integration_service
 
 class DocumentService:
     """Servicio principal para gestión de documentos de usuario"""

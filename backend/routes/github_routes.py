@@ -8,6 +8,7 @@ github_router = APIRouter(
     prefix="/github", 
     tags=["🐙 GitHub Integration"]
 )
+router = github_router
 
 # Configuración
 REPO = "Yael-Parra/OrientaTech"

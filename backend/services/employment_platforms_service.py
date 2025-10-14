@@ -6,8 +6,8 @@ Provides employment platform data to enrich LLM prompts
 from typing import List, Dict, Optional
 from loguru import logger
 import asyncpg
-from database.db_connection import connect, disconnect
-from models.employment_platforms import (
+from backend.database.db_connection import connect, disconnect
+from backend.models.employment_platforms import (
     EmploymentPlatformCreate,
     EmploymentPlatformUpdate,
     EmploymentPlatformResponse,
@@ -851,4 +851,3 @@ async def populate_sample_platforms() -> bool:
         
     except Exception as e:
         logger.error(f"❌ Error populating sample platforms: {e}")
-        return False

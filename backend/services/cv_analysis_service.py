@@ -6,8 +6,8 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from loguru import logger
 
-from agent.langchain import CVAnalyzer, analyze_user_cv, get_career_advice_for_profile
-from services.document_utils import DocumentUtils
+from backend.agent.langchain import CVAnalyzer, analyze_user_cv, get_career_advice_for_profile
+from backend.services.document_utils import DocumentUtils
 
 
 class CVAnalysisService:

@@ -8,7 +8,7 @@ import asyncpg
 from datetime import datetime
 
 # Imports de modelos
-from models.reviews import (
+from backend.models.reviews import (
     ReviewCreate, 
     ReviewUpdate, 
     ReviewResponse,
@@ -18,10 +18,10 @@ from models.reviews import (
 )
 
 # Imports de autenticación
-from routes.auth_simple import get_current_user
+from backend.routes.auth_simple import get_current_user
 
 # Import de base de datos
-from database.db_connection import connect_async, disconnect_async
+from backend.database.db_connection import connect_async, disconnect_async
 
 # Router para reseñas
 reviews_router = APIRouter(
@@ -35,6 +35,7 @@ reviews_router = APIRouter(
         500: {"description": "Error interno del servidor"}
     }
 )
+router = reviews_router
 
 # ===========================
 # FUNCIONES AUXILIARES DB

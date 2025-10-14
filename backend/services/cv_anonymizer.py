@@ -74,19 +74,14 @@ class CVAnonymizer:
                 print("💡 Para mejor detección, instalar con: python -m spacy download es_core_news_sm")
             self.nlp = None
     
+    # inside CVAnonymizer._get_user_data
     def _get_user_data(self, user_id: int) -> Optional[Dict]:
         """
-        Obtiene los datos del usuario desde la base de datos
-        
-        Args:
-            user_id: ID del usuario
-            
-        Returns:
-            Diccionario con los datos del usuario o None si no se encuentra
+        Obtiene datos del usuario desde la base de datos
         """
         try:
             # Importar aquí para evitar imports circulares
-            from models.user_profile import UserPersonalInfoQueries
+            from backend.models.user_profile import UserPersonalInfoQueries
             
             # Verificar si ya hay un loop activo
             try:
@@ -125,7 +120,7 @@ class CVAnonymizer:
     def _run_async_query(self, user_id: int) -> Optional[Dict]:
         """Ejecuta la consulta asíncrona en un nuevo loop"""
         import asyncio
-        from models.user_profile import UserPersonalInfoQueries
+        from backend.models.user_profile import UserPersonalInfoQueries
         
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

@@ -1,7 +1,8 @@
 """
-API routes for CV analysis and career advice
+Rutas para análisis de CV y consejos de carrera
 """
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
+from typing import Annotated, Optional
 from fastapi.responses import JSONResponse
 from typing import Dict, Any
 import os
@@ -9,9 +10,10 @@ import tempfile
 from pathlib import Path
 
 from loguru import logger
-from services.cv_analysis_service import cv_analysis_service
-from services.document_utils import DocumentUtils
-from routes.auth_simple import get_current_user
+from backend.services.cv_analysis_service import cv_analysis_service
+from backend.services.document_utils import DocumentUtils
+from backend.routes.auth_simple import get_current_user
+from backend.database.db_connection import connect, disconnect
 
 router = APIRouter(prefix="/api/cv-analysis", tags=["CV Analysis"])
 
@@ -146,7 +148,7 @@ async def get_profile_status(current_user: Dict = Depends(get_current_user)):
             raise HTTPException(status_code=401, detail="Usuario no autenticado")
         
         # Check if user has profile in database
-        from database.db_connection import connect, disconnect
+        from backend.database.db_connection import connect, disconnect
         
         conn = connect()
         if conn is None:

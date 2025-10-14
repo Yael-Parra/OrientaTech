@@ -11,7 +11,7 @@ from loguru import logger
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from database.db_connection import connect_async, disconnect_async
+from backend.database.db_connection import connect_async, disconnect_async
 
 # Import embedding service
 try:

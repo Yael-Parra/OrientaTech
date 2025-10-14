@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, status, Query
 from typing import Annotated, Optional
 from loguru import logger
 
-from models.rag_models import (
+from backend.models.rag_models import (
     SearchRequest,
     UserSearchRequest,
     SearchResponse,
@@ -18,12 +18,12 @@ from models.rag_models import (
     LLMContextAnalysis,      # ← NUEVO
     LLMCareerAdvice         # ← NUEVO
 )
-from services.RAG import (
+from backend.services.RAG import (
     get_search_service,
     get_ranking_service
 )
-from services.rag_llm_integration_service import get_rag_llm_integration_service  # ← NUEVO
-from routes.auth_simple import get_current_user
+from backend.services.rag_llm_integration_service import get_rag_llm_integration_service  # ← NUEVO
+from backend.routes.auth_simple import get_current_user
 
 
 # Router for RAG endpoints
@@ -36,6 +36,8 @@ rag_router = APIRouter(
         500: {"model": ErrorResponse, "description": "Internal server error"}
     }
 )
+router = rag_router
+
 
 # Service instances
 search_service = get_search_service()

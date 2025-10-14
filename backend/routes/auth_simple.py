@@ -6,17 +6,15 @@ import asyncpg
 import os
 from dotenv import load_dotenv
 
-from models import UserRegister, UserLogin, UserResponse, Token
-from services import (
+from backend.models.auth import UserRegister, UserLogin, UserResponse, Token
+from backend.services import (
     verify_password, 
     get_password_hash, 
     create_access_token, 
     verify_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
-
-# Import the unified database connection
-from database.db_connection import connect_async, disconnect_async
+from backend.database.db_connection import connect_async, disconnect_async
 from pathlib import Path
 
 # Cargar variables de entorno desde backend/.env

@@ -8,7 +8,7 @@ from typing import Optional, List
 from datetime import datetime
 
 # Imports de modelos
-from models.employment_platforms import (
+from backend.models.employment_platforms import (
     EmploymentPlatformCreate, 
     EmploymentPlatformUpdate, 
     EmploymentPlatformResponse,
@@ -18,10 +18,10 @@ from models.employment_platforms import (
 )
 
 # Imports de autenticación
-from routes.auth_simple import get_current_user
+from backend.routes.auth_simple import get_current_user
 
 # Import del servicio unificado
-from services.employment_platforms_service import get_employment_platforms_service, populate_sample_platforms
+from backend.services.employment_platforms_service import get_employment_platforms_service, populate_sample_platforms
 
 # Router para plataformas de empleo
 platforms_router = APIRouter(
@@ -34,6 +34,7 @@ platforms_router = APIRouter(
         500: {"description": "Error interno del servidor"}
     }
 )
+router = platforms_router
 
 # Instancia del servicio unificado
 platforms_service = get_employment_platforms_service()

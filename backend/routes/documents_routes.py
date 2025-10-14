@@ -6,12 +6,12 @@ from fastapi.responses import FileResponse
 from typing import Annotated, Optional
 import os
 
-from models.documents import (
+from backend.models.documents import (
     DocumentType, DocumentUploadResponse, UserDocumentsResponse,
     DocumentDeleteResponse, DocumentUploadRequest
 )
-from services.document_service import DocumentService
-from routes.auth_simple import get_current_user
+from backend.services.document_service import DocumentService
+from backend.routes.auth_simple import get_current_user
 
 # Router para documentos con documentación mejorada
 documents_router = APIRouter(
@@ -25,6 +25,7 @@ documents_router = APIRouter(
         500: {"description": "Error interno del servidor"}
     }
 )
+router = documents_router
 
 # Instancia del servicio
 document_service = DocumentService()

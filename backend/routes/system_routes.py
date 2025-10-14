@@ -1,11 +1,7 @@
-"""
-Router para endpoints del sistema
-Incluye endpoints de salud, información y monitoreo
-"""
 from fastapi import APIRouter
 import os
 from datetime import datetime
-from database.db_connection import connect_async, disconnect_async
+from backend.database.db_connection import connect_async, disconnect_async
 
 # Router para endpoints del sistema
 system_router = APIRouter(
@@ -16,6 +12,7 @@ system_router = APIRouter(
         503: {"description": "Servicio no disponible"}
     }
 )
+router = system_router
 
 @system_router.get(
     "/",
