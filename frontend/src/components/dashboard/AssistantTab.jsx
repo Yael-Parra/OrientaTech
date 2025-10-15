@@ -44,13 +44,105 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  // Initialize chat with welcome message based on CV status
+  // 🧠 Detector inteligente: decide usar RAG o Chatbot según el contexto
+  const detectMessageContext = (message) => {
+    const lowerMessage = message.toLowerCase()
+    
+    // Keywords para RAG (análisis de documentos)
+    const ragKeywords = [
+      'cv', 'curriculum', 'documento', 'experiencia', 'habilidades', 
+      'mi perfil', 'analizar', 'evalúa mi', 'según mi cv', 'fortalezas'
+    ]
+    
+    // Keywords para Chatbot (conversación general)  
+    const chatbotKeywords = [
+      'hola', 'consejos', 'ayuda', 'motivación', 'carrera profesional',
+      'tendencias', 'qué estudiar', 'recomendaciones generales'
+    ]
+    
+    const ragCount = ragKeywords.filter(k => lowerMessage.includes(k)).length
+    const chatCount = chatbotKeywords.filter(k => lowerMessage.includes(k)).length
+    
+    return ragCount > chatCount ? 'rag' : 'chatbot'
+  }
+
+  // 💬 Función para enviar mensaje al Chatbot
+  const sendToChatbot = async (message, token) => {
+    const response = await fetch('/api/chatbot/message', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ message })
+    })
+    
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || 'Error del chatbot')
+    }
+    
+    return await response.json()
+  }
+
+  // Initialize chat with welcome message and chatbot history
   useEffect(() => {
     if (messages.length === 0) {
-      checkCVStatusAndInitialize()
+      initializeUnifiedChat()
     }
     loadDocuments()
   }, [])
+
+  const initializeUnifiedChat = async () => {
+    try {
+      // 1. Cargar historial del chatbot si existe
+      const token = localStorage.getItem('access_token')
+      let chatbotHistory = []
+      
+      try {
+        const historyRes = await fetch('/api/chatbot/history', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        
+        if (historyRes.ok) {
+          const historyData = await historyRes.json()
+          if (historyData.history && historyData.history.trim()) {
+            // Parsear el historial del chatbot y convertirlo a mensajes
+            const historyLines = historyData.history.split('\n').filter(line => line.trim())
+            chatbotHistory = historyLines.map((line, index) => {
+              const isUser = line.startsWith('Usuario:')
+              const text = line.replace(/^(Usuario:|Asistente:)\s*/, '')
+              return {
+                id: `history-${index}`,
+                text,
+                isUser,
+                timestamp: new Date(Date.now() - (historyLines.length - index) * 60000), // Simular timestamps
+                type: isUser ? 'user' : 'chatbot',
+                expanded: false
+              }
+            }).filter(msg => msg.text.trim()) // Filtrar mensajes vacíos
+          }
+        }
+      } catch (error) {
+        console.log('No se pudo cargar el historial del chatbot:', error)
+      }
+
+      // 2. Verificar status de documentos para mensaje de bienvenida
+      await checkCVStatusAndInitialize()
+
+      // 3. Si hay historial del chatbot, agregarlo después del mensaje de bienvenida
+      if (chatbotHistory.length > 0) {
+        setMessages(prev => [...prev, ...chatbotHistory])
+      }
+
+    } catch (error) {
+      console.error('Error inicializando chat unificado:', error)
+      // Fallback al método original
+      checkCVStatusAndInitialize()
+    }
+  }
 
   const checkCVStatusAndInitialize = async () => {
     try {
@@ -171,6 +263,29 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
     try {
       const token = localStorage.getItem('access_token')
       
+      // 🧠 Detectar si usar RAG o Chatbot
+      const messageType = detectMessageContext(inputMessage)
+      
+      if (messageType === 'chatbot') {
+        // 💬 Usar Chatbot para conversación general
+        const chatbotResponse = await sendToChatbot(inputMessage, token)
+        const assistantMessage = `💬 **Conversación General**\n\n${chatbotResponse.response}`
+        
+        const botMessage = {
+          id: Date.now() + 1,
+          text: assistantMessage,
+          isUser: false,
+          timestamp: new Date(),
+          expanded: false,
+          type: 'chatbot'
+        }
+        
+        // Añadir mensaje al historial unificado
+        setMessages(prev => [...prev, botMessage])
+        return
+      }
+      
+      // 🔍 Si no es chatbot, continúa con RAG (código original)
       const searchRequest = {
         query: inputMessage,
         user_id: parseInt(localStorage.getItem('user_id')),
@@ -208,7 +323,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
       
       // Check if we have LLM analysis (new enhanced feature)
       if (data.llm_advice && data.llm_analysis) {
-        assistantMessage = `🤖 **Análisis IA de tu consulta:**\n\n`
+        assistantMessage = `🔍 **Análisis RAG de Documentos**\n\n🤖 **Análisis IA de tu consulta:**\n\n`
         
         // Add LLM advice if available (using real backend field names)
         if (data.llm_advice) {
@@ -682,14 +797,26 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
       {/* RAG Assistant Chat Interface */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-          <h3 className="font-semibold text-gray-800 flex items-center">
-            <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            Consulta sobre tu CV
+          <h3 className="font-semibold text-gray-800 flex items-center justify-between">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-orange-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Asistente Inteligente Híbrido
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center text-xs text-green-600">
+                <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                <span>RAG</span>
+              </div>
+              <div className="flex items-center text-xs text-blue-600">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mr-1"></div>
+                <span>Chat</span>
+              </div>
+            </div>
           </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Haz preguntas específicas sobre tu CV y obtén análisis personalizados
+            🧠 <strong>IA Híbrida:</strong> Análisis de documentos (RAG) + Conversación general (Chatbot)
           </p>
         </div>
 
@@ -719,6 +846,10 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                       ? 'bg-gradient-to-r from-orange-500 to-orange-300 text-white'
                       : message.isError
                       ? 'bg-red-100 border border-red-200 text-red-800'
+                      : message.type === 'chatbot'
+                      ? 'bg-blue-50 border border-blue-200 text-blue-900'
+                      : message.text?.includes('🔍 **Análisis RAG')
+                      ? 'bg-green-50 border border-green-200 text-green-900'
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
@@ -726,6 +857,23 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                     <p className="text-sm">{message.text}</p>
                   ) : (
                     <div>
+                      {/* Indicador de tipo de respuesta */}
+                      {(message.type === 'chatbot' || message.text?.includes('💬 **Conversación General**')) && (
+                        <div className="flex items-center mb-2 text-xs text-blue-600">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                          <span>Chatbot Conversacional</span>
+                        </div>
+                      )}
+                      {message.text?.includes('🔍 **Análisis RAG') && (
+                        <div className="flex items-center mb-2 text-xs text-green-600">
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Análisis RAG de Documentos</span>
+                        </div>
+                      )}
                       <div className="text-sm whitespace-pre-line leading-relaxed">
                         {message.text.length > 1500 ? (
                           <div>
