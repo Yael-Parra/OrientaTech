@@ -18,6 +18,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database.db_connection import connect, disconnect
 from models.user_profile import EducationLevelEnum, DigitalLevelEnum
+from agent.chat_builder import ChatBuilder
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -341,3 +342,15 @@ if __name__ == "__main__":
         logger.info("🧹 Código refactorizado - Solo métodos utilizados")
     except Exception as e:
         logger.error(f"❌ Error en CV Analyzer refactorizado: {e}")
+
+
+class Chatbot:
+    """
+    Wrapper ligero que expone .chat(user_id, user_input) usando ChatBuilder.
+    """
+    def __init__(self):
+        from agent.chat_builder import ChatBuilder
+        self.builder = ChatBuilder()
+
+    def chat(self, user_id: int, user_input: str) -> str:
+        return self.builder.send_user_message(user_id, user_input)
