@@ -20,16 +20,9 @@ const ResourcesTab = ({ userData, profileData }) => {
       setRecommendationsError(null)
       
       const token = localStorage.getItem('access_token')
-      const userId = userData.id
       
-      // Query to get personalized recommendations based on the user's CV
-      const recommendationQuery = `Analiza mi CV y dame recomendaciones específicas para mejorar mi perfil profesional. Incluye:
-      - Habilidades técnicas que debería desarrollar
-      - Certificaciones que me beneficiarían
-      - Áreas de mejora en mi experiencia
-      - Recursos de formación específicos
-      - Oportunidades de crecimiento profesional
-      Dame recomendaciones concretas y actionables basadas en mi perfil actual.`
+      // Query to extract CV content for analysis (not asking for recommendations)
+      const recommendationQuery = `Muéstrame mi experiencia laboral, habilidades técnicas, educación, certificaciones, proyectos y competencias profesionales completas`
 
       const searchRequest = {
         query: recommendationQuery,
@@ -37,7 +30,7 @@ const ResourcesTab = ({ userData, profileData }) => {
         similarity_threshold: 0.2
       }
 
-      const response = await fetch(`/api/rag/search/user/${userId}`, {
+      const response = await fetch('/api/rag/search/user?include_llm_analysis=true', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -52,11 +45,16 @@ const ResourcesTab = ({ userData, profileData }) => {
 
       const data = await response.json()
       
+      console.log('RAG Response for recommendations:', data)
+      
       if (data.results && data.results.length > 0) {
+        console.log('Processing RAG results for recommendations:', data.results)
         // Process the RAG results to generate actionable recommendations
         const recommendations = generateRAGBasedRecommendations(data.results, profileData)
+        console.log('Generated recommendations:', recommendations)
         setRagRecommendations(recommendations)
       } else {
+        console.log('No RAG results found')
         // If no documents found, show message to upload CV
         setRecommendationsError('Sube tu CV para recibir recomendaciones personalizadas basadas en tu perfil profesional.')
       }
@@ -72,83 +70,140 @@ const ResourcesTab = ({ userData, profileData }) => {
   const generateRAGBasedRecommendations = (ragResults, profile) => {
     const recommendations = []
     
-    // Analyze the content from user's documents to generate specific recommendations
+    // Extract and analyze content from all user documents
     const allContent = ragResults.map(result => 
       result.content_preview || result.content || ''
     ).join(' ').toLowerCase()
     
-    const area = profile?.area_of_interest?.toLowerCase() || ''
-    const level = profile?.experience_level?.toLowerCase() || ''
+    // Analyze current CV content to generate improvement recommendations
+    console.log('Analyzing CV content for recommendations:', allContent.substring(0, 200))
     
-    // Technology skills analysis
-    if (allContent.includes('javascript') || allContent.includes('react') || allContent.includes('node') || area.includes('fullstack') || area.includes('frontend')) {
+    // 1. Technical Skills Gap Analysis
+    const hasBasicJS = allContent.includes('javascript')
+    const hasReact = allContent.includes('react')
+    const hasTypeScript = allContent.includes('typescript')
+    const hasNode = allContent.includes('node')
+    const hasPython = allContent.includes('python')
+    const hasDocker = allContent.includes('docker')
+    const hasAWS = allContent.includes('aws')
+    
+    if ((hasBasicJS || hasReact) && !hasTypeScript) {
       recommendations.push({
-        type: 'skill_development',
-        title: 'Especialízate en Tecnologías Modernas',
-        description: 'Basado en tu perfil, te recomiendo profundizar en TypeScript, Next.js y arquitecturas de microservicios. Estas tecnologías están en alta demanda.',
+        type: 'skill_gap',
+        title: 'Aprende TypeScript para Destacar',
+        description: 'Detecté experiencia en JavaScript/React en tu CV, pero no TypeScript. Esta tecnología es altamente demandada y te diferenciará en el mercado.',
         priority: 'high',
         category: 'Desarrollo Técnico',
-        based_on: 'Análisis de tu experiencia en JavaScript/React'
+        based_on: 'Análisis de gap técnico en tu CV'
       })
     }
 
-    if (allContent.includes('python') || allContent.includes('django') || allContent.includes('fastapi')) {
+    if ((hasNode || hasPython) && !hasDocker) {
+      recommendations.push({
+        type: 'devops_gap',
+        title: 'Incorpora Contenedores y DevOps',
+        description: 'Tienes experiencia en backend, pero añadir Docker, Kubernetes y CI/CD te abrirá más oportunidades profesionales.',
+        priority: 'high',
+        category: 'DevOps',
+        based_on: 'Experiencia backend detectada sin herramientas DevOps'
+      })
+    }
+
+    // 2. Experience Level Analysis
+    const hasYearsExp = allContent.match(/(\d+)\s*(año|year|experience)/i)
+    const yearsOfExp = hasYearsExp ? parseInt(hasYearsExp[1]) : 0
+    
+    if (yearsOfExp < 2 || allContent.includes('junior') || allContent.includes('becario')) {
+      recommendations.push({
+        type: 'career_boost',
+        title: 'Acelera tu Crecimiento Profesional',
+        description: 'Como desarrollador junior, enfócate en crear 2-3 proyectos sólidos, contribuir a open source y obtener una primera certificación técnica.',
+        priority: 'high',
+        category: 'Crecimiento Profesional',
+        based_on: `Nivel junior detectado en tu CV`
+      })
+    } else if (yearsOfExp >= 3) {
+      recommendations.push({
+        type: 'senior_growth',
+        title: 'Evoluciona hacia Roles de Liderazgo',
+        description: 'Con tu experiencia, considera roles de tech lead, arquitectura de software o especialización en un dominio específico.',
+        priority: 'medium',
+        category: 'Liderazgo Técnico',
+        based_on: `${yearsOfExp}+ años de experiencia detectados`
+      })
+    }
+
+    // 3. Education & Certification Gaps
+    if (!allContent.includes('certificación') && !allContent.includes('certificate')) {
       recommendations.push({
         type: 'certification',
-        title: 'Certificaciones en Cloud y DevOps',
-        description: 'Con tu background en Python, considera obtener certificaciones AWS Solutions Architect o Google Cloud Professional. Complementará tu stack backend.',
-        priority: 'high',
-        category: 'Certificaciones',
-        based_on: 'Tu experiencia con Python detectada en tu CV'
-      })
-    }
-
-    // Experience level analysis
-    if (level === 'junior' || allContent.includes('prácticas') || allContent.includes('becario')) {
-      recommendations.push({
-        type: 'portfolio',
-        title: 'Construye un Portfolio Impactante',
-        description: 'Crea 3-4 proyectos que demuestren tu progresión técnica. Incluye un proyecto fullstack, una API REST y contribuciones open source.',
-        priority: 'high',
-        category: 'Desarrollo Profesional',
-        based_on: 'Tu nivel de experiencia actual'
-      })
-    } else if (level === 'senior' || allContent.includes('líder') || allContent.includes('senior')) {
-      recommendations.push({
-        type: 'leadership',
-        title: 'Desarrolla Habilidades de Liderazgo Técnico',
-        description: 'Considera roles de mentoring, arquitectura de sistemas y gestión de equipos. Explora certificaciones en management y metodologías ágiles.',
+        title: 'Obtén Certificaciones Reconocidas',
+        description: 'Tu CV no muestra certificaciones. Considera AWS Solutions Architect, Microsoft Azure, o certificaciones de Google Cloud según tu stack.',
         priority: 'medium',
-        category: 'Liderazgo',
-        based_on: 'Tu experiencia senior detectada'
+        category: 'Certificaciones',
+        based_on: 'No se detectaron certificaciones en tu CV'
       })
     }
 
-    // General recommendations based on content analysis
-    if (allContent.includes('inglés') || allContent.includes('english')) {
+    // 4. Language Skills
+    const hasEnglish = allContent.includes('english') || allContent.includes('inglés')
+    if (!hasEnglish || allContent.includes('básico')) {
       recommendations.push({
         type: 'language',
-        title: 'Potencia tu Inglés Técnico',
-        description: 'Mejora tu inglés técnico con cursos específicos de IT. Practica presentaciones técnicas y participa en comunidades internacionales.',
+        title: 'Mejora tu Inglés Técnico',
+        description: 'El inglés avanzado es crítico en tech. Practica con documentación técnica, participa en foros internacionales y considera certificaciones.',
         priority: 'medium',
         category: 'Habilidades Blandas',
-        based_on: 'Conocimientos de inglés mencionados en tu perfil'
+        based_on: hasEnglish ? 'Inglés básico detectado' : 'No se menciona nivel de inglés'
       })
     }
 
-    // If no specific recommendations generated, provide general ones
+    // 5. Portfolio & Online Presence
+    const hasGithub = allContent.includes('github')
+    const hasLinkedIn = allContent.includes('linkedin')
+    
+    if (!hasGithub) {
+      recommendations.push({
+        type: 'online_presence',
+        title: 'Fortalece tu Presencia Online',
+        description: 'No detecté GitHub en tu CV. Crea un portfolio en GitHub con 3-5 proyectos que demuestren tu nivel técnico y buenas prácticas.',
+        priority: 'high',
+        category: 'Portfolio Online',
+        based_on: 'No se detectó GitHub en tu CV'
+      })
+    }
+
+    // 6. Soft Skills Development
+    if (!allContent.includes('liderazgo') && !allContent.includes('team') && !allContent.includes('equipo')) {
+      recommendations.push({
+        type: 'soft_skills',
+        title: 'Desarrolla Habilidades de Colaboración',
+        description: 'Fortalece competencias en trabajo en equipo, comunicación técnica y metodologías ágiles. Son diferenciadoras en roles senior.',
+        priority: 'low',
+        category: 'Habilidades Blandas',
+        based_on: 'Pocas referencias a trabajo en equipo en tu CV'
+      })
+    }
+
+    // Ensure we have at least one recommendation
     if (recommendations.length === 0) {
       recommendations.push({
-        type: 'general',
-        title: 'Optimiza tu Perfil Profesional',
-        description: 'Basándome en tu CV, te recomiendo actualizar tu perfil en LinkedIn, crear un portafolio online y obtener certificaciones en tu área de especialización.',
+        type: 'general_improvement',
+        title: 'Optimiza la Estructura de tu CV',
+        description: 'Tu CV necesita mejoras en estructura y contenido. Añade proyectos específicos, métricas de impacto y tecnologías actualizadas.',
         priority: 'medium',
-        category: 'Desarrollo Profesional',
+        category: 'CV Optimization',
         based_on: 'Análisis general de tu CV'
       })
     }
 
-    return recommendations.slice(0, 4) // Limit to 4 recommendations
+    // Return top 4 most relevant recommendations
+    return recommendations
+      .sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 }
+        return priorityOrder[b.priority] - priorityOrder[a.priority]
+      })
+      .slice(0, 4)
   }
 
   const getResourcesByArea = () => {

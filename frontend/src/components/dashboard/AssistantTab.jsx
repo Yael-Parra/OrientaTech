@@ -17,19 +17,77 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [deletingDoc, setDeletingDoc] = useState(null)
 
-  // Initialize chat with welcome message
+  // Helper functions para manejar diferentes campos de la API
+  const getDocumentName = (doc) => {
+    // Buscar el primer campo válido sin logs excesivos
+    if (doc?.original_name && doc.original_name !== 'undefined') return doc.original_name
+    if (doc?.filename && doc.filename !== 'undefined') return doc.filename
+    if (doc?.name && doc.name !== 'undefined') return doc.name
+    return `Documento_${doc?.id || Date.now()}`
+  }
+
+  const getDocumentSize = (doc) => {
+    // Según el modelo backend, el campo correcto es 'size'
+    return doc.size || 0
+  }
+
+  const getDocumentDate = (doc) => {
+    // Según el modelo backend, el campo correcto es 'uploaded_at'
+    return doc.uploaded_at || new Date().toISOString()
+  }
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  }
+
+  // Initialize chat with welcome message based on CV status
   useEffect(() => {
     if (messages.length === 0) {
+      checkCVStatusAndInitialize()
+    }
+    loadDocuments()
+  }, [])
+
+  const checkCVStatusAndInitialize = async () => {
+    try {
+      const token = localStorage.getItem('access_token')
+      const res = await fetch('/documents/my-documents', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const documents = data.documents || []
+        const hasCVs = documents.length > 0
+        
+        const welcomeMessage = {
+          id: Date.now(),
+          text: hasCVs 
+            ? `¡Hola! Soy tu asistente personal de reinvención profesional. 🤖\n\n✅ **He detectado que ya tienes ${documents.length} documento${documents.length > 1 ? 's' : ''} subido${documents.length > 1 ? 's' : ''}:**\n${documents.map(doc => `📄 ${doc.original_filename}`).join('\n')}\n\nYa puedo ayudarte con:\n\n• 📊 Análisis de tus habilidades y competencias\n• 💼 Evaluación de tu experiencia laboral\n• 🎯 Recomendaciones personalizadas de formación\n• 📈 Sugerencias para potenciar tu perfil profesional\n• 🚀 Estrategias para acelerar tu carrera\n\n**¿Qué te gustaría saber sobre tu perfil profesional?**`
+            : '¡Hola! Soy tu asistente personal de reinvención profesional. 🤖\n\n❌ **Aún no tienes documentos subidos**\n\nUna vez que subas tu CV, podré ayudarte con:\n\n• 📊 Análisis de tus habilidades y competencias\n• 💼 Evaluación de tu experiencia laboral\n• 🎯 Recomendaciones personalizadas de formación\n• 📈 Sugerencias para potenciar tu perfil profesional\n• 🚀 Estrategias para acelerar tu carrera\n\n**Importante:** Solo analizo TUS documentos subidos. No tengo acceso a CVs de otras personas.\n\n¿Ya tienes tu CV listo para subir?',
+          isUser: false,
+          timestamp: new Date()
+        }
+        setMessages([welcomeMessage])
+      }
+    } catch (error) {
+      console.error('Error checking CV status:', error)
+      // Fallback message
       const welcomeMessage = {
         id: Date.now(),
-        text: '¡Hola! Soy tu asistente personal de reinvención profesional. 🤖\n\nUna vez que subas tu CV, podré ayudarte con:\n\n• 📊 Análisis de tus habilidades y competencias\n• 💼 Evaluación de tu experiencia laboral\n• 🎯 Recomendaciones personalizadas de formación\n• 📈 Sugerencias para potenciar tu perfil profesional\n• 🚀 Estrategias para acelerar tu carrera\n\n**Importante:** Solo analizo TUS documentos subidos. No tengo acceso a CVs de otras personas.\n\n¿Ya tienes tu CV listo para subir?',
+        text: '¡Hola! Soy tu asistente personal de reinvención profesional. 🤖\n\nSube tu CV para que pueda ayudarte con análisis personalizados de tu perfil profesional.',
         isUser: false,
         timestamp: new Date()
       }
       setMessages([welcomeMessage])
     }
-    loadDocuments()
-  }, [])
+  }
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
@@ -102,7 +160,8 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
       id: Date.now(), 
       text: inputMessage, 
       isUser: true, 
-      timestamp: new Date() 
+      timestamp: new Date(),
+      expanded: false
     }
     
     setMessages(prev => [...prev, userMessage])
@@ -111,20 +170,18 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
 
     try {
       const token = localStorage.getItem('access_token')
-      const userId = userData?.id
       
-      if (!userId) {
-        throw new Error('No se pudo obtener la información del usuario')
-      }
-
       const searchRequest = {
         query: inputMessage,
-        limit: 5,
-        similarity_threshold: 0.3
+        user_id: parseInt(localStorage.getItem('user_id')),
+        num_results: 5,
+        similarity_threshold: 0.3,
+        max_response_length: 4000,  // Aumentar límite de respuesta
+        detailed_analysis: true     // Solicitar análisis detallado
       }
 
-      // Use user-specific search endpoint
-      const response = await fetch(`/api/rag/search/user/${userId}`, {
+      // Use user-specific search endpoint with LLM analysis for better insights
+      const response = await fetch('/api/rag/search/user?include_llm_analysis=true', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -148,13 +205,151 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
       }
 
       let assistantMessage = ''
-      if (data.results && data.results.length > 0) {
-        assistantMessage = `Basándome en tus documentos subidos, he encontrado información relevante sobre tu consulta:\n\n`
+      
+      // Check if we have LLM analysis (new enhanced feature)
+      if (data.llm_advice && data.llm_analysis) {
+        assistantMessage = `🤖 **Análisis IA de tu consulta:**\n\n`
+        
+        // Add LLM advice if available (using real backend field names)
+        if (data.llm_advice) {
+          // Análisis de la búsqueda
+          if (data.llm_advice.search_analysis) {
+            assistantMessage += `� **Análisis de tu consulta:**\n${data.llm_advice.search_analysis}\n\n`
+          }
+          
+          // Comparación del perfil
+          if (data.llm_advice.profile_comparison) {
+            assistantMessage += `👤 **Análisis de tu perfil:**\n${data.llm_advice.profile_comparison}\n\n`
+          }
+          
+          // Gaps de habilidades
+          if (data.llm_advice.skill_gaps) {
+            assistantMessage += `📚 **Áreas a mejorar:**\n${data.llm_advice.skill_gaps}\n\n`
+          }
+          
+          // Pasos concretos
+          if (data.llm_advice.concrete_steps) {
+            assistantMessage += `✅ **Pasos concretos a seguir:**\n${data.llm_advice.concrete_steps}\n\n`
+          }
+          
+          // Oportunidades identificadas
+          if (data.llm_advice.identified_opportunities) {
+            assistantMessage += `🎯 **Oportunidades identificadas:**\n${data.llm_advice.identified_opportunities}\n\n`
+          }
+          
+          // Recursos recomendados
+          if (data.llm_advice.recommended_resources) {
+            assistantMessage += `📖 **Recursos recomendados:**\n${data.llm_advice.recommended_resources}\n\n`
+          }
+          
+          // Estrategia de aplicación
+          if (data.llm_advice.application_strategy) {
+            assistantMessage += `🚀 **Estrategia de aplicación:**\n${data.llm_advice.application_strategy}\n\n`
+          }
+          
+          // Próximos pasos
+          if (data.llm_advice.next_steps && data.llm_advice.next_steps !== "Contenido disponible en respuesta completa del LLM (ver logs para detalles)") {
+            assistantMessage += `🎯 **Próximos pasos:**\n${data.llm_advice.next_steps}\n\n`
+          }
+        }
+        
+        // Add context analysis (using real backend field names)
+        if (data.llm_analysis) {
+          // Resumen del contexto
+          if (data.llm_analysis.context_summary) {
+            assistantMessage += `📋 **Resumen del contexto:**\n${data.llm_analysis.context_summary}\n\n`
+          }
+          
+          // Fortalezas clave
+          if (data.llm_analysis.key_strengths && data.llm_analysis.key_strengths.length > 0) {
+            assistantMessage += `� **Fortalezas identificadas:**\n`
+            data.llm_analysis.key_strengths.forEach(strength => {
+              assistantMessage += `• ${strength}\n`
+            })
+            assistantMessage += `\n`
+          }
+          
+          // Áreas de mejora
+          if (data.llm_analysis.improvement_areas && data.llm_analysis.improvement_areas.length > 0) {
+            assistantMessage += `📈 **Áreas de mejora específicas:**\n`
+            data.llm_analysis.improvement_areas.forEach(area => {
+              assistantMessage += `• ${area}\n`
+            })
+            assistantMessage += `\n`
+          }
+          
+          // Patrones de habilidades
+          if (data.llm_analysis.skill_patterns && data.llm_analysis.skill_patterns.length > 0) {
+            assistantMessage += `🔧 **Habilidades detectadas:**\n`
+            data.llm_analysis.skill_patterns.forEach(skill => {
+              assistantMessage += `• ${skill}\n`
+            })
+            assistantMessage += `\n`
+          }
+          
+          // Sectores dominantes
+          if (data.llm_analysis.dominant_sectors && data.llm_analysis.dominant_sectors.length > 0) {
+            assistantMessage += `🏢 **Sectores de experiencia:**\n`
+            data.llm_analysis.dominant_sectors.forEach(sector => {
+              assistantMessage += `• ${sector}\n`
+            })
+            assistantMessage += `\n`
+          }
+          
+          // Oportunidades de transición
+          if (data.llm_analysis.transition_opportunities && data.llm_analysis.transition_opportunities.length > 0) {
+            assistantMessage += `� **Oportunidades de transición:**\n`
+            data.llm_analysis.transition_opportunities.forEach(opp => {
+              assistantMessage += `• ${opp}\n`
+            })
+            assistantMessage += `\n`
+          }
+          
+          // Nivel de experiencia
+          if (data.llm_analysis.experience_level) {
+            assistantMessage += `📊 **Nivel de experiencia:** ${data.llm_analysis.experience_level}\n\n`
+          }
+          
+          // Calidad de coincidencia
+          if (data.llm_analysis.matching_quality) {
+            assistantMessage += `🎯 **Calidad de coincidencia:** ${data.llm_analysis.matching_quality}/10\n\n`
+          }
+          
+          // Preparación tecnológica promedio
+          if (data.llm_analysis.tech_readiness_avg) {
+            assistantMessage += `⚡ **Preparación tecnológica:** ${data.llm_analysis.tech_readiness_avg}/10\n\n`
+          }
+        }
+        
+        // Add relevant documents
+        if (data.relevant_documents && data.relevant_documents.length > 0) {
+          assistantMessage += `� **Documentos relevantes:**\n`
+          data.relevant_documents.forEach(doc => {
+            assistantMessage += `• ${doc.filename} (Relevancia: ${doc.score.toFixed(2)})\n`
+          })
+          assistantMessage += `\n`
+        }
+
+        // Add any additional response content that might be available
+        if (data.additional_context) {
+          assistantMessage += `📝 **Contexto adicional:**\n${data.additional_context}\n\n`
+        }
+
+        if (data.detailed_response) {
+          assistantMessage += `� **Análisis detallado:**\n${data.detailed_response}\n\n`
+        }
+
+        if (data.complete_analysis) {
+          assistantMessage += `📊 **Análisis completo:**\n${data.complete_analysis}\n\n`
+        }
+      } 
+      // Fallback to standard response if no LLM analysis
+      else if (data.results && data.results.length > 0) {
+        assistantMessage = `Basándome en tus documentos subidos, he encontrado información relevante:\n\n`
         data.results.forEach((result, index) => {
-          // Use correct field names from SearchResultItem model
-          const content = result.content_preview || result.content || result.text || 'Contenido no disponible'
-          const score = result.similarity_score || result.score || 0
-          const filename = result.original_filename || result.filename || 'Documento'
+          const content = result.content_preview || result.content || 'Contenido no disponible'
+          const score = result.similarity_score || 0
+          const filename = result.original_filename || `Documento ${index + 1}`
           
           assistantMessage += `📄 **${filename}**\n`
           assistantMessage += `${content.substring(0, 200)}${content.length > 200 ? '...' : ''}\n`
@@ -162,19 +357,6 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
             assistantMessage += `*Relevancia: ${(score * 100).toFixed(1)}%*\n\n`
           }
         })
-        
-        // Add personalized recommendations based on the query
-        const lowerQuery = inputMessage.toLowerCase()
-        if (lowerQuery.includes('carrera') || lowerQuery.includes('mejorar') || lowerQuery.includes('fullstack')) {
-          assistantMessage += `\n💡 **Recomendaciones personalizadas para tu carrera fullstack:**\n\n`
-          assistantMessage += `• **Tecnologías emergentes**: Considera aprender TypeScript, GraphQL, o tecnologías serverless\n`
-          assistantMessage += `• **Proyectos destacados**: Crea un portafolio que demuestre aplicaciones completas end-to-end\n`
-          assistantMessage += `• **Especialización**: Profundiza en arquitecturas de microservicios o desarrollo móvil\n`
-          assistantMessage += `• **Soft skills**: Desarrolla habilidades de liderazgo técnico y comunicación con stakeholders\n`
-          assistantMessage += `• **Certificaciones**: Considera obtener certificaciones en cloud (AWS, Azure, GCP)`
-        } else if (lowerQuery.includes('habilidad') || lowerQuery.includes('skill') || lowerQuery.includes('competencia')) {
-          assistantMessage += `\n🎯 **Análisis de habilidades encontradas en tu perfil**`
-        }
       } else {
         assistantMessage = 'No he encontrado información específica en tus documentos subidos sobre esa consulta. Esto puede deberse a:\n\n• No has subido ningún CV aún\n• Tu consulta no tiene relación con el contenido de tus documentos\n• Podrías reformular tu pregunta de manera más específica\n\n¿Te gustaría subir un CV o hacer una pregunta diferente?'
       }
@@ -184,7 +366,8 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
         text: assistantMessage,
         isUser: false,
         timestamp: new Date(),
-        results: data.results || []
+        results: data.results || [],
+        expanded: false
       }
 
       setMessages(prev => [...prev, botMessage])
@@ -209,7 +392,8 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
         text: errorText,
         isUser: false,
         timestamp: new Date(),
-        isError: true
+        isError: true,
+        expanded: false
       }
       setMessages(prev => [...prev, errorMessage])
     } finally {
@@ -331,14 +515,6 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
     }
   }
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
   const getDocumentTypeLabel = (type) => {
     const types = {
       'cv': '📄 CV',
@@ -454,13 +630,13 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-800 truncate" title={doc.original_name}>
-                        {doc.original_name || 'Documento sin nombre'}
+                      <p className="font-medium text-gray-800 truncate" title={getDocumentName(doc)}>
+                        {getDocumentName(doc)}
                       </p>
                       <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
                         <span>{getDocumentTypeLabel(doc.type)}</span>
-                        <span>{formatFileSize(doc.size || 0)}</span>
-                        <span>{new Date(doc.uploaded_at).toLocaleDateString()}</span>
+                        <span>{formatFileSize(getDocumentSize(doc))}</span>
+                        <span>{new Date(getDocumentDate(doc)).toLocaleDateString()}</span>
                       </div>
                     </div>
                   </div>
@@ -468,7 +644,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     {/* Download button */}
                     <button
-                      onClick={() => handleDownloadDocument(doc.id, doc.original_name)}
+                      onClick={() => handleDownloadDocument(doc.id, getDocumentName(doc))}
                       className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                       title="Descargar"
                     >
@@ -479,7 +655,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                     
                     {/* Delete button */}
                     <button
-                      onClick={() => handleDeleteDocument(doc.id, doc.original_name)}
+                      onClick={() => handleDeleteDocument(doc.id, getDocumentName(doc))}
                       disabled={deletingDoc === doc.id}
                       className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
                       title="Eliminar"
@@ -518,7 +694,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
         </div>
 
         {/* Chat Messages */}
-        <div className="h-96 overflow-y-auto p-4 space-y-4">
+        <div className="h-[500px] overflow-y-auto p-4 space-y-4">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 mt-8">
               <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -538,7 +714,7 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                 className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                  className={`max-w-sm lg:max-w-xl xl:max-w-2xl px-4 py-2 rounded-lg ${
                     message.isUser
                       ? 'bg-gradient-to-r from-orange-500 to-orange-300 text-white'
                       : message.isError
@@ -550,7 +726,31 @@ const AssistantTab = ({ userData, onLoadDocuments }) => {
                     <p className="text-sm">{message.text}</p>
                   ) : (
                     <div>
-                      <p className="text-sm whitespace-pre-line">{message.text}</p>
+                      <div className="text-sm whitespace-pre-line leading-relaxed">
+                        {message.text.length > 1500 ? (
+                          <div>
+                            <div className={`${message.expanded ? '' : 'max-h-96 overflow-hidden'} transition-all duration-300`}>
+                              {message.text}
+                            </div>
+                            {!message.expanded && (
+                              <div className="bg-gradient-to-t from-gray-100 to-transparent h-8 -mt-8 mb-2"></div>
+                            )}
+                            <button
+                              onClick={() => {
+                                const updatedMessages = messages.map(m => 
+                                  m.id === message.id ? {...m, expanded: !m.expanded} : m
+                                )
+                                setMessages(updatedMessages)
+                              }}
+                              className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-2"
+                            >
+                              {message.expanded ? 'Ver menos' : 'Ver respuesta completa'}
+                            </button>
+                          </div>
+                        ) : (
+                          message.text
+                        )}
+                      </div>
                       {message.results && message.results.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-gray-200">
                           <p className="text-xs text-gray-600">
