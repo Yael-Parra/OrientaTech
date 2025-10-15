@@ -1,8 +1,10 @@
 {
-  "name": "frontend",
+  "name": "orientatech-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "OrientaTech - Plataforma de orientación profesional hacia el sector tecnológico",
+  "author": "Factoría F5",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
