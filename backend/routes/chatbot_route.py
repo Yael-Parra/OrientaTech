@@ -1,9 +1,10 @@
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from loguru import logger
 
 from agent.langchain import Chatbot
+from routes.auth_simple import get_current_user
 
 router = APIRouter(prefix="/api/chatbot", tags=["Chatbot"])
 
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/chatbot", tags=["Chatbot"])
 chatbot = Chatbot()
 
 class ChatMessageRequest(BaseModel):
-    user_id: int
+    # Antes tenía user_id: int; ahora solo el mensaje
     message: str
 
 class ChatMessageResponse(BaseModel):
@@ -20,16 +21,20 @@ class ChatMessageResponse(BaseModel):
     timestamp: datetime
 
 @router.post("/message", response_model=ChatMessageResponse)
-async def send_message(payload: ChatMessageRequest) -> ChatMessageResponse:
+async def send_message(
+    payload: ChatMessageRequest,
+    current_user: dict = Depends(get_current_user)
+) -> ChatMessageResponse:
     """
-    Envía un mensaje del usuario al chatbot con memoria conversacional.
+    Envía un mensaje del usuario autenticado al chatbot con memoria conversacional.
     """
     try:
-        logger.info(f"📩 Chatbot: mensaje recibido user_id={payload.user_id}")
-        response_text = chatbot.chat(user_id=payload.user_id, user_input=payload.message)
-        logger.info(f"📤 Chatbot: respuesta generada user_id={payload.user_id}")
+        user_id = current_user["id"]
+        logger.info(f"📩 Chatbot: mensaje recibido user_id={user_id}")
+        response_text = chatbot.chat(user_id=user_id, user_input=payload.message)
+        logger.info(f"📤 Chatbot: respuesta generada user_id={user_id}")
         return ChatMessageResponse(
-            user_id=payload.user_id,
+            user_id=user_id,
             response=response_text,
             timestamp=datetime.utcnow(),
         )
@@ -38,15 +43,16 @@ async def send_message(payload: ChatMessageRequest) -> ChatMessageResponse:
         raise HTTPException(status_code=500, detail="Error generando respuesta del chatbot")
 
 @router.get("/history")
-async def get_history(user_id: int):
+async def get_history(
+    current_user: dict = Depends(get_current_user)
+):
     """
-    Recupera el historial de conversación (buffer) del usuario.
-    Útil para testear que persiste contexto entre mensajes.
+    Recupera el historial del usuario autenticado.
     """
     try:
+        user_id = current_user["id"]
         logger.info(f"📚 Chatbot: recuperando historial user_id={user_id}")
-        # Acceso controlado al builder para leer el historial persistido
-        history_text = chatbot.builder._load_history(user_id)  # método interno, válido para testing
+        history_text = chatbot.builder._load_history(user_id)
         return {"user_id": user_id, "history": history_text}
     except Exception as e:
         logger.error(f"❌ Error recuperando historial: {e}")
