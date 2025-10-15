@@ -10,7 +10,12 @@ import os
 from dotenv import load_dotenv
 from loguru import logger
 from contextlib import asynccontextmanager
+from pathlib import Path
 
+# Cargar variables de entorno desde backend/.env (antes de importar routers)
+load_dotenv(dotenv_path=Path(__file__).parent / '.env')
+
+# Módulo
 from routes.auth_simple import auth_router
 from routes.github_routes import github_router
 from routes.documents_routes import documents_router
@@ -20,11 +25,7 @@ from routes.reviews_routes import reviews_router
 from routes.employment_platforms_routes import platforms_router
 from routes.rag_routes import rag_router
 from services.setup_service import setup_service
-from pathlib import Path
-
-# Cargar variables de entorno desde backend/.env
-load_dotenv(dotenv_path=Path(__file__).parent / '.env')
-
+from routes.chatbot_route import router as chatbot_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -98,7 +99,8 @@ app = FastAPI(
         {
             "name": "🔍 RAG Search",
             "description": "Sistema de búsqueda semántica con IA. Búsqueda inteligente de documentos usando embeddings vectoriales y similitud semántica.",
-        }
+        },
+        
     ]
 )
 
@@ -120,6 +122,7 @@ app.include_router(platforms_router)
 app.include_router(reviews_router)
 app.include_router(github_router)
 app.include_router(rag_router)
+app.include_router(chatbot_router)
 
 if __name__ == "__main__":
     import uvicorn
