@@ -22,7 +22,6 @@
 - [🚀 Mejoras Futuras](#-mejoras-futuras)
 - [🛠️ Tecnologías Utilizadas](#-tecnologías-utilizadas)
 - [🧠 Arquitectura del Sistema](#-arquitectura-del-sistema)
-- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
 - [✍ Instrucciones de Despliegue](#-instrucciones-de-despliegue)
 - [👩‍💻 Colaboradores](#-colaboradores)
 
@@ -145,17 +144,12 @@ El sistema está **contenedorizado con Docker** y **desplegado en Kamatera**, co
 - Vectorial para embeddings de documentos y consultas
 - **Chatbot interactivo:** Implementado con LangChain, Groq y FastAPI
 - **Despliegue:** Docker + Kamatera
-
+  
+<br>
+</br>
 <p align="center">
-<img src="./client/src/assets/diagram_orientatech_architecture.png" alt="Diagrama de Arquitectura de Orientatech" width="700"/>
+<img src="./frontend/public/img/diagramaorientatech.drawio.png" alt="Diagrama de Arquitectura de Orientatech" width="700"/>
 </p>
-
----
-
-## 📁 Estructura del Proyecto
-
-IMAGEN DE DIAGRAMA AQUI
-
 
 ---
 
@@ -185,7 +179,7 @@ http://localhost:5173
 
 ---
 
-##👩‍💻 Colaboradores
+## 👩‍💻 Colaboradores
 
 Equipo apasionado por la inteligencia artificial aplicada a la empleabilidad y la educación.
 
