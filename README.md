@@ -56,7 +56,7 @@ El sistema está **contenedorizado con Docker** y **desplegado en Kamatera**, co
 
 - **Documentación Técnica**
   
-[www.deepwiki.com/documentation/orientatech]()
+https://deepwiki.com/Yael-Parra/OrientaTech
 
 
 - **Presentación**
@@ -132,6 +132,8 @@ El sistema está **contenedorizado con Docker** y **desplegado en Kamatera**, co
 ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white)
 ![Kamatera](https://img.shields.io/badge/-Kamatera-0078D4?logo=cloud&logoColor=white)
 
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Yael-Parra/OrientaTech)
 ---
 
 ## 🧠 Arquitectura del Sistema
