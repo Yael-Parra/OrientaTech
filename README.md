@@ -1,6 +1,9 @@
 <p align="center">
-  <img src="frontend/public/img/logo-factoria-f5.png" alt="Orientatech Logo" width="900"/>
+  <img src="frontend/public/img/logo-factoria-f5.png" 
+       alt="Orientatech Logo" 
+       style="width:600px; max-height:130px; height:auto; object-fit:contain;"/>
 </p>
+
 
 <h1 align="center">🧭 ORIENTATECH - Agente de Reorientación Tecnológica</h1>
 
@@ -19,7 +22,6 @@
 - [🚀 Mejoras Futuras](#-mejoras-futuras)
 - [🛠️ Tecnologías Utilizadas](#-tecnologías-utilizadas)
 - [🧠 Arquitectura del Sistema](#-arquitectura-del-sistema)
-- [📁 Estructura del Proyecto](#-estructura-del-proyecto)
 - [✍ Instrucciones de Despliegue](#-instrucciones-de-despliegue)
 - [👩‍💻 Colaboradores](#-colaboradores)
 
@@ -48,15 +50,18 @@ El sistema está **contenedorizado con Docker** y **desplegado en Kamatera**, co
 ## 📎 Enlaces Útiles
 
 - **WebApp (Demo)**
-http://103.45.245.6/
+  
+[www.orientatech.es](http://103.45.245.6/)
 
 
 - **Documentación Técnica**
-AQUI VA DEEPWIKI
+  
+[www.deepwiki.com/documentation/orientatech]()
 
 
 - **Presentación**
-https://www.canva.com/design/DAG1q4CnHkg/HvdNOgXSaT4nmETOz0scMw/view?utm_content=DAG1q4CnHkg&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hfc936a4c34
+  
+[www.canva.com/design/orientatech](https://www.canva.com/design/DAG1q4CnHkg/HvdNOgXSaT4nmETOz0scMw/view?utm_content=DAG1q4CnHkg&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hfc936a4c34)
 
 
 
@@ -140,17 +145,12 @@ https://www.canva.com/design/DAG1q4CnHkg/HvdNOgXSaT4nmETOz0scMw/view?utm_content
 - Vectorial para embeddings de documentos y consultas
 - **Chatbot interactivo:** Implementado con LangChain, Groq y FastAPI
 - **Despliegue:** Docker + Kamatera
-
+  
+<br>
+</br>
 <p align="center">
-<img src="./client/src/assets/diagram_orientatech_architecture.png" alt="Diagrama de Arquitectura de Orientatech" width="700"/>
+<img src="./frontend/public/img/diagramaorientatech.drawio.png" alt="Diagrama de Arquitectura de Orientatech" width="700"/>
 </p>
-
----
-
-## 📁 Estructura del Proyecto
-
-IMAGEN DE DIAGRAMA AQUI
-
 
 ---
 
@@ -180,7 +180,7 @@ http://localhost:5173
 
 ---
 
-##👩‍💻 Colaboradores
+## 👩‍💻 Colaboradores
 
 Equipo apasionado por la inteligencia artificial aplicada a la empleabilidad y la educación.
 
@@ -189,7 +189,7 @@ Equipo apasionado por la inteligencia artificial aplicada a la empleabilidad y l
 |-----------------------|--------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Yael Parra**        | [![GitHub](https://img.shields.io/badge/GitHub-FF4700?logo=github&logoColor=white)](https://github.com/Yael-Parra)       | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/yael-parra/)                   |
 | **Maryna Nalyvaiko**  | [![GitHub](https://img.shields.io/badge/GitHub-FF4700?logo=github&logoColor=white)](https://github.com/MarynaDRST)       | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/maryna-nalyvaiko-69745a236/)   |
-| **Vada Velazquez**    | [![GitHub](https://img.shields.io/badge/GitHub-FF4700?logo=github&logoColor=white)](https://github.com/peperuizdev)      | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/peperuiznieto/)                |
+| **Veida Velazquez**   | [![GitHub](https://img.shields.io/badge/GitHub-FF4700?logo=github&logoColor=white)](https://github.com/DarthVada36)      | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/in/vadavelazquez/)                |
 | **Juan Carlos Macías** | [![GitHub](https://img.shields.io/badge/GitHub-FF4700?logo=github&logoColor=white)](https://github.com/juancmacias)     | [![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?logo=linkedin&logoColor=white)]([https://www.linkedin.com/in/nhoeli-salazar/](https://www.linkedin.com/in/max-beltran/))               |
 
 

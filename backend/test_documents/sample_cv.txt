@@ -1,0 +1,33 @@
+
+            CURRICULUM VITAE
+            
+            Nombre: Test Developer
+            Email: test@example.com
+            Teléfono: +34 123 456 789
+            
+            EXPERIENCIA PROFESIONAL:
+            - Backend Developer en Tech Company (2020-2024)
+              * Desarrollo de APIs REST con Python y FastAPI
+              * Implementación de sistemas RAG con PostgreSQL y pgvector
+              * Trabajo con embeddings y búsqueda semántica
+              
+            - Junior Developer en Startup (2018-2020)
+              * Desarrollo web con Django
+              * Bases de datos SQL y NoSQL
+              
+            HABILIDADES TÉCNICAS:
+            - Lenguajes: Python, JavaScript, SQL
+            - Frameworks: FastAPI, Django, React
+            - Bases de datos: PostgreSQL, MongoDB, Redis
+            - Machine Learning: Transformers, Sentence-BERT, Vector Databases
+            - DevOps: Docker, Git, CI/CD
+            
+            EDUCACIÓN:
+            - Ingeniería Informática, Universidad Técnica (2014-2018)
+            - Máster en Inteligencia Artificial (2022-2023)
+            
+            IDIOMAS:
+            - Español: Nativo
+            - Inglés: Avanzado (C1)
+            - Ruso: Intermedio (B1)
+            

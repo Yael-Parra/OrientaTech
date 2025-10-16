@@ -22,6 +22,7 @@ __pycache__/
 *.so
 .Python
 env/
+.venv/
 venv/
 ENV/
 env.bak/
@@ -37,7 +38,9 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-
+.python-version
+pyproject.toml
+uv.lock
 # Bases de datos
 *.db
 *.sqlite
@@ -154,5 +157,36 @@ config.local.json
 uploads/
 temp/
 
+# Documentos subidos por usuarios (contiene información sensible)
+backend/docs/
+docs/
+
+# Cache de modelos de ML (archivos grandes que no deben subirse a GitHub)
+backend/models_cache/
+models_cache/
+model_cache/
+**/models_cache/
+**/model_cache/
+
+# Archivos de modelos de ML
+*.model
+*.pkl
+*.joblib
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+*.h5
+*.hdf5
+
+# Caché de transformers y embeddings
+transformers_cache/
+huggingface_cache/
+embeddings_cache/
+
 # Archivos de sistema Windows
 desktop.ini
+
+models_cache/
+user_chat/
