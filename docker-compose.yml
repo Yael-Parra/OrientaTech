@@ -1,0 +1,97 @@
+services:
+  # ===================================
+  # FRONTEND SERVICE
+  # ===================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: orientatech-frontend
+    ports:
+      - "3000:80"
+    networks:
+      - frontend-backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M  
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ===================================
+  # BACKEND SERVICE
+  # ===================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile  # Оптимизированная версия (CPU-only PyTorch, 2.51GB)
+    container_name: orientatech-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    volumes:
+      - docs_data:/app/docs
+      - models_cache:/app/models_cache
+    networks:
+      - frontend-backend
+      - backend-database
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ===================================
+# NETWORKS
+# ===================================
+networks:
+  frontend-backend:
+    driver: bridge
+    name: orientatech-frontend-backend
+  backend-database:
+    driver: bridge
+    name: orientatech-backend-database
+
+# ===================================
+# VOLUMES
+# ===================================
+volumes:
+  docs_data:
+    driver: local
+    name: orientatech-docs
+  models_cache:
+    driver: local
+    name: orientatech-models

@@ -1,0 +1,83 @@
+services:
+  # ===================================
+  # FRONTEND SERVICE (DEV)
+  # ===================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: orientatech-frontend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - frontend-backend
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ===================================
+  # BACKEND SERVICE (DEV)
+  # ===================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: orientatech-backend-dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - docs_data:/app/docs
+      - models_cache:/app/models_cache
+    networks:
+      - frontend-backend
+      - backend-database
+    env_file:
+      - backend/.env
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+# ===================================
+# NETWORKS
+# ===================================
+networks:
+  frontend-backend:
+    driver: bridge
+    name: orientatech-frontend-backend-dev
+  backend-database:
+    driver: bridge
+    name: orientatech-backend-database-dev
+
+# ===================================
+# VOLUMES
+# ===================================
+volumes:
+  docs_data:
+    driver: local
+    name: orientatech-docs-dev
+  models_cache:
+    driver: local
+    name: orientatech-models-dev
