@@ -6,7 +6,14 @@
 # ===================================
 # STAGE 1: BUILD
 # ===================================
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
+
+# Install system dependencies for Ubuntu
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -14,8 +21,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev dependencies for build)
-RUN npm ci --silent
+# Install ALL dependencies (including dev dependencies for build)    
+# Try npm ci first, fallback to npm install if it fails
+RUN npm ci --verbose --no-audit --no-fund || (echo "npm ci failed, trying npm install..." && npm install --no-audit --no-fund)
 
 # Copy source code
 COPY . .
@@ -26,10 +34,10 @@ RUN npm run build
 # ===================================
 # STAGE 2: PRODUCTION
 # ===================================
-FROM nginx:alpine AS production
+FROM nginx:latest AS production
 
 # Install curl for health checks
-RUN apk add --no-cache curl
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy built application from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
