@@ -40,10 +40,8 @@ FROM nginx:latest AS production
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy built application from builder stage
+# Vite automatically copies public/ contents to dist/ during build
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Ensure public files are copied correctly
-COPY --from=builder /app/public /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf

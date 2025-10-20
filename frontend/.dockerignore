@@ -103,7 +103,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public/ - НЕ исключаем, нужен для Vite build
 
 # Storybook build outputs
 .out
